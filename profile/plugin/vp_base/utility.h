@@ -14,36 +14,18 @@
  * under the License.
  */
 
-#ifndef HAL_PLUGIN_DOT_H
-#define HAL_PLUGIN_DOT_H
+#ifndef UTILITY_DOT_H
+#define UTILITY_DOT_H
 
-#include <vector>
-#include <set>
-#include "xdp/profile/plugin/vp_base/vp_base_plugin.h"
+#include <string>
+
+// Functions that can be used in the database, the plugins, and the writers
 
 namespace xdp {
 
-  // Forward declarations
-  class DeviceIntf ; 
+  std::string getCurrentDateTime() ;
+  const char* getToolVersion() ;
 
-  class HALPlugin : public XDPPlugin
-  {
-  private:
-    std::vector<DeviceIntf*> devices ;
-    std::set<void*> encounteredHandles ;
-
-    void flushDevices() ;
-    void continuousOffload() ;
-  public:
-    HALPlugin() ;
-    ~HALPlugin() ;
-
-    virtual void writeAll(bool openNewFiles) ;
-    virtual void readDeviceInfo(void* device) ;
-    void flushDeviceInfo(void* device) ;
-    void setEncounteredDeviceHandle(void* handle) ;
-  } ;
-
-}
+} // end namespace xdp
 
 #endif

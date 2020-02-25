@@ -14,34 +14,24 @@
  * under the License.
  */
 
-#ifndef HAL_PLUGIN_DOT_H
-#define HAL_PLUGIN_DOT_H
+#ifndef LOP_PLUGIN_DOT_H
+#define LOP_PLUGIN_DOT_H
 
-#include <vector>
-#include <set>
 #include "xdp/profile/plugin/vp_base/vp_base_plugin.h"
 
 namespace xdp {
 
-  // Forward declarations
-  class DeviceIntf ; 
+  // For low overhead profiling, we can add extra computation to the
+  //  setup and teardown of the plugin as long as the actual monitoring 
+  //  is as minimal as possible.
 
-  class HALPlugin : public XDPPlugin
+  class LowOverheadProfilingPlugin : public XDPPlugin
   {
   private:
-    std::vector<DeviceIntf*> devices ;
-    std::set<void*> encounteredHandles ;
-
-    void flushDevices() ;
-    void continuousOffload() ;
+    static const char* APIs[] ;
   public:
-    HALPlugin() ;
-    ~HALPlugin() ;
-
-    virtual void writeAll(bool openNewFiles) ;
-    virtual void readDeviceInfo(void* device) ;
-    void flushDeviceInfo(void* device) ;
-    void setEncounteredDeviceHandle(void* handle) ;
+    LowOverheadProfilingPlugin() ;
+    ~LowOverheadProfilingPlugin() ;
   } ;
 
 }

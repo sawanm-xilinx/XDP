@@ -14,23 +14,40 @@
  * under the License.
  */
 
-#ifndef HAL_HOST_TRACE_WRITER_DOT_H
-#define HAL_HOST_TRACE_WRITER_DOT_H
+#ifndef LOW_OVERHEAD_TRACE_WRITER_DOT_H
+#define LOW_OVERHEAD_TRACE_WRITER_DOT_H
 
-#include <string>
+#include <map>
 
 #include "xdp/profile/writer/vp_base/vp_trace_writer.h"
 
 namespace xdp {
 
-  // This is for host HAL APIs
-  class HALHostTraceWriter : public VPTraceWriter
+  class LowOverheadTraceWriter : public VPTraceWriter
   {
   private:
-    HALHostTraceWriter() = delete ;
+    LowOverheadTraceWriter() = delete ;
 
-    // Header information 
-    std::string XRTVersion ;
+    // Mappings of all the event types to bucket numbers
+    std::map<uint64_t, int> commandQueueToBucket ;
+    int generalAPIBucket ;
+    int readBucket ;
+    int writeBucket ;
+    int enqueueBucket ;
+
+    void setupBuckets() ;
+
+    void writeHumanReadableHeader() ;
+    void writeHumanReadableStructure() ;
+    void writeHumanReadableStringTable() ;
+    void writeHumanReadableTraceEvents() ;
+    void writeHumanReadableDependencies() ;
+
+    void writeBinaryHeader() ;
+    void writeBinaryStructure() ;
+    void writeBinaryStringTable() ;
+    void writeBinaryTraceEvents() ;
+    void writeBinaryDependencies() ;
 
   protected:
     virtual void writeHeader() ;
@@ -39,11 +56,11 @@ namespace xdp {
     virtual void writeTraceEvents() ;
     virtual void writeDependencies() ;
 
+    virtual bool isHost() { return true ; } 
+
   public:
-    HALHostTraceWriter(const char* filename, const std::string& version, 
-		       const std::string& creationTime, 
-		       const std::string& xrtV) ;
-    ~HALHostTraceWriter() ;
+    LowOverheadTraceWriter(const char* filename) ;
+    ~LowOverheadTraceWriter() ;
 
     virtual void write(bool openNewFile) ;
   } ;
