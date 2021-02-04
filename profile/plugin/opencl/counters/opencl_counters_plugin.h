@@ -14,27 +14,32 @@
  * under the License.
  */
 
-#define XDP_SOURCE
+#ifndef OPENCL_COUNTERS_PLUGIN_DOT_H
+#define OPENCL_COUNTERS_PLUGIN_DOT_H
 
-#include "xdp/profile/database/events/opencl_api_calls.h"
+#include "xocl/core/device.h"
+
+#include "xdp/profile/plugin/vp_base/vp_base_plugin.h"
 
 namespace xdp {
 
-  OpenCLAPICall::OpenCLAPICall(uint64_t s_id, double ts, uint64_t /*f_id*/,
-                               uint64_t name, uint64_t q)
-      : APICall(s_id, ts, name, OPENCL_API_CALL),
-        queueAddress(q)
+  class OpenCLCountersProfilingPlugin : public XDPPlugin
   {
-  }
+  private:
+    std::shared_ptr<xocl::platform> platform ;
 
-  OpenCLAPICall::~OpenCLAPICall()
-  {
-  }
+  protected:
+    virtual void emulationSetup() ;
 
-  void OpenCLAPICall::dump(std::ofstream& fout, uint32_t bucket)
-  {
-    VTFEvent::dump(fout, bucket) ;
-    fout << "," << functionName << std::endl ;
-  }
+  public:
+    OpenCLCountersProfilingPlugin() ;
+    ~OpenCLCountersProfilingPlugin() ;
+
+    // For emulation based flows we need to convert real time into
+    //  estimated device time to match what we reported previously
+    uint64_t convertToEstimatedTimestamp(uint64_t realTimeStamp) ;
+  } ;
 
 } // end namespace xdp
+
+#endif
