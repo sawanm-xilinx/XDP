@@ -4,11 +4,13 @@
 
 # ====================================================================
 # This builds the AIE Trace plugin.  It is currently built on x86,
-# Edge-Versal systems, client and ve2 but not Edge-aarch64.  It also has a dependency
-# on the hardware shim
+# Edge, Client, and VE2 platforms that support AIE.  It also has
+# a dependency on the hardware shim.
 # ====================================================================
 
 file(GLOB AIE_TRACE_PLUGIN_FILES
+  "${PROFILE_DIR}/plugin/aie_base/*"
+  "${PROFILE_DIR}/plugin/aie_base/generations/*"
   "${PROFILE_DIR}/plugin/aie_trace/*.h"
   "${PROFILE_DIR}/plugin/aie_trace/*.cpp"
   "${PROFILE_DIR}/writer/aie_trace/*.h"
@@ -100,7 +102,8 @@ else()
       "${IMPL_DIR}/*.cpp"
     )
 
-    add_library(xdp_aie_trace_plugin_xdna SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
+    add_library(xdp_aie_trace_plugin_xdna SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} 
+                ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
     add_dependencies(xdp_aie_trace_plugin_xdna xdp_core xrt_coreutil)
     target_link_libraries(xdp_aie_trace_plugin_xdna PRIVATE xdp_core xrt_coreutil xaiengine)
     target_compile_definitions(xdp_aie_trace_plugin_xdna PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
@@ -112,7 +115,6 @@ else()
       LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
     )
   endif()
-    
   if (DEFINED XRT_AIE_BUILD AND XRT_EDGE)
     set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_trace/edge")
     set(OFFLOAD_DIR "${PROFILE_DIR}/device/aie_trace")
