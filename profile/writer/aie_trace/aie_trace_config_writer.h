@@ -34,6 +34,7 @@ namespace xdp {
   {
   private:
     uint64_t deviceIndex;
+    bool isWritten = false;
   public:
     AieTraceConfigWriter(const char* filename, uint64_t index);
     ~AieTraceConfigWriter();

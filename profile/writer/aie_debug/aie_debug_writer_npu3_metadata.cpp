@@ -95,9 +95,9 @@ void NPU3WriterUsedRegisters::populateRegDataMap() {
     regDataMap["cm_combo_event_control1"].push_back(RegData("combo6", "17:16"));
     regDataMap["cm_combo_event_control1"].push_back(RegData("combo5", "9:8"));
     regDataMap["cm_combo_event_control1"].push_back(RegData("combo4", "1:0"));
-    regDataMap["cm_event_group_watchpoint"].push_back(RegData("Watchpoint_2", "2:2"));
-    regDataMap["cm_event_group_watchpoint"].push_back(RegData("Watchpoint_1", "1:1"));
-    regDataMap["cm_event_group_watchpoint"].push_back(RegData("Watchpoint_0", "0:0"));
+    regDataMap["cm_event_group_watchpoint_enable"].push_back(RegData("Watchpoint_2", "2:2"));
+    regDataMap["cm_event_group_watchpoint_enable"].push_back(RegData("Watchpoint_1", "1:1"));
+    regDataMap["cm_event_group_watchpoint_enable"].push_back(RegData("Watchpoint_0", "0:0"));
     regDataMap["cm_accumulator_control"].push_back(RegData("Output", "1:1"));
     regDataMap["cm_accumulator_control"].push_back(RegData("Input", "0:0"));
     regDataMap["cm_performance_control0"].push_back(RegData("Cnt1_Stop_Event", "31:24"));

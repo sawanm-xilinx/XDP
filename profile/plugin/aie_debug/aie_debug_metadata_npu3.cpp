@@ -97,7 +97,7 @@ void NPU3UsedRegisters::populateRegNameToValueMap() {
    regNameToValue["cm_event_group_pc_enable"] = npu3::cm_event_group_pc_enable;
    regNameToValue["cm_event_group_stream_switch_enable"] = npu3::cm_event_group_stream_switch_enable;
    regNameToValue["cm_event_group_user_event_enable"] = npu3::cm_event_group_user_event_enable;
-   regNameToValue["cm_event_group_watchpoint"] = npu3::cm_event_group_watchpoint;
+   regNameToValue["cm_event_group_watchpoint_enable"] = npu3::cm_event_group_watchpoint_enable;
    regNameToValue["cm_event_status0"] = npu3::cm_event_status0;
    regNameToValue["cm_event_status1"] = npu3::cm_event_status1;
    regNameToValue["cm_event_status2"] = npu3::cm_event_status2;
@@ -6931,7 +6931,7 @@ void NPU3UsedRegisters::populateRegValueToNameMap() {
    coreRegValueToName[0x000A0504] = "cm_event_group_pc_enable";
    coreRegValueToName[0x000A051C] = "cm_event_group_stream_switch_enable";
    coreRegValueToName[0x000A0534] = "cm_event_group_user_event_enable";
-   coreRegValueToName[0x000A0520] = "cm_event_group_watchpoint";
+   coreRegValueToName[0x000A0520] = "cm_event_group_watchpoint_enable";
    coreRegValueToName[0x000A0200] = "cm_event_status0";
    coreRegValueToName[0x000A0204] = "cm_event_status1";
    coreRegValueToName[0x000A0208] = "cm_event_status2";

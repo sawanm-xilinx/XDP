@@ -213,6 +213,7 @@ namespace xdp {
     uint8_t streamId;
     uint8_t burstLength;
     uint16_t bufferDescriptorId;
+    uint8_t type;
 
     TraceGMIO(uint32_t i, uint8_t col, uint8_t num, 
               uint8_t stream, uint8_t len, uint16_t bdId = UINT16_MAX, uint8_t t = 0)

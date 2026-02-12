@@ -37,22 +37,46 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
     "${PROFILE_DIR}/device/common/*.cpp"
   )
 
-  file(GLOB AIE_TRACE_COMPONENT_FILES
-    "${OFFLOAD_DIR}/*.h"
-    "${OFFLOAD_DIR}/*.cpp"
-    "${DEVICE_DIR}/*.h"
-    "${DEVICE_DIR}/*.cpp"
-    "${IMPL_DIR}/*.h"
-    "${IMPL_DIR}/*.cpp"
-  )
+  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+    file(GLOB AIE_TRACE_COMPONENT_FILES
+      "${OFFLOAD_DIR}/aie_trace_offload_npu3.h"
+      "${OFFLOAD_DIR}/aie_trace_offload_npu3.cpp"
+      "${DEVICE_DIR}/*.h"
+      "${DEVICE_DIR}/*.cpp"
+      "${IMPL_DIR}/aie_trace_npu3.h"
+      "${IMPL_DIR}/aie_trace_npu3.cpp"
+      "${IMPL_DIR}/aie_trace.h"
+      "${IMPL_DIR}/aie_trace.cpp"
+      "${IMPL_DIR}/resources_def.h"
+      "${PROFILE_DIR}/device/common/npu3/*"
+    )
+  else()
+    file(GLOB AIE_TRACE_COMPONENT_FILES
+      "${OFFLOAD_DIR}/*.h"
+      "${OFFLOAD_DIR}/*.cpp"
+      "${DEVICE_DIR}/*.h"
+      "${DEVICE_DIR}/*.cpp"
+      "${IMPL_DIR}/*.h"
+      "${IMPL_DIR}/*.cpp"
+    )
+  endif()
 
   xrt_configure_version_file(xdp_aie_trace_plugin SHARED)
   add_library(xdp_aie_trace_plugin SHARED xdp_aie_trace_plugin-version.rc
     ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_DRIVER_COMMON_UTIL_FILES})
   add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
-  target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
+  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+    target_link_libraries(xdp_aie_trace_plugin PRIVATE
+                          xdp_core xrt_coreutil xaiengine aiebu_library_objects)
+  else()
+    target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
+  endif()
   target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
-  target_include_directories(xdp_aie_trace_plugin PRIVATE ${AIERT_DIR}/include)
+  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+    target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_NPU3_BUILD=1)
+  endif()
+  target_include_directories(xdp_aie_trace_plugin PRIVATE
+                             ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
   set_target_properties(xdp_aie_trace_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
   install (TARGETS xdp_aie_trace_plugin

@@ -151,7 +151,7 @@ const unsigned int cm_event_group_errors2_enable = 0x000A0518;
 // Event enable for Stream Switch Group
 const unsigned int cm_event_group_stream_switch_enable = 0x000A051C;
 // Event enable for Watchpoint Group
-const unsigned int cm_event_group_watchpoint = 0x000A0520;
+const unsigned int cm_event_group_watchpoint_enable = 0x000A0520;
 // Event enable for DMA Activity Group
 const unsigned int cm_event_group_dma_enable = 0x000A0524;
 // Event enable for Lock Group

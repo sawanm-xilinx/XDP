@@ -37,7 +37,7 @@ namespace xdp::aie {
             // NOTE: XAIE_IO_BACKEND_CONTROLCODE is the default
             // XAie_SetIOBackend(aieDevInst, XAIE_IO_BACKEND_CONTROLCODE);
             XAie_OpenControlCodeFile(aieDevInst, getAsmFileName().c_str(), 8192);
-            XAie_StartNewJob(aieDevInst);
+            XAie_StartNewJob(aieDevInst, XAIE_START_JOB);
             return true;
         }
         catch(const std::exception& e) {
@@ -101,7 +101,7 @@ namespace xdp::aie {
 
             //Convert ASM to ELF data.
             auto as = aiebu::aiebu_assembler(aiebu::aiebu_assembler::buffer_type::asm_aie4,
-                                             control_code_buf, {},  libpaths);
+                                             control_code_buf, std::vector<std::string>{}, libpaths);
             
             //Write elf data to a file
             auto e = as.get_elf();
