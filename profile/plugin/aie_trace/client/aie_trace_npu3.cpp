@@ -368,13 +368,13 @@ namespace xdp {
     memoryTileTraceFlushLocs.clear();
     interfaceTileTraceFlushLocs.clear();
 
-    //xrt_core::message::send(severity_level::info, "XRT", "Before AIE trace flush.");
+    xrt_core::message::send(severity_level::info, "XRT", "Before AIE trace flush.");
 
-    //auto hwContext = metadata->getHwContext();
+    auto hwContext = metadata->getHwContext();
     // tranxHandler->submitTransaction(&aieDevInst, hwContext);
-    //tranxHandler->submitELF(hwContext);
+    tranxHandler->submitELF(hwContext);
 
-    //xrt_core::message::send(severity_level::info, "XRT", "Successfully scheduled AIE trace flush.");
+    xrt_core::message::send(severity_level::info, "XRT", "Successfully scheduled AIE trace flush.");
   }
 
   void AieTrace_NPU3Impl::pollTimers(uint64_t index, void* handle) 
