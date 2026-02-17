@@ -164,7 +164,9 @@ AIEControlConfigFiletype::getTraceGMIOs() const
         std::unordered_map<std::string, io_config> gmios;
         for (auto& dma_node : traceShimDMAs.get()) {
             io_config gmio;
-            gmio.type = io_type::GMIO;
+            auto ioType  = dma_node.second.get<uint8_t>("type");
+            gmio.type =  (ioType == MM2S_CONTROL) ? io_type::CONTROL_DMA
+                  : ((ioType == S2MM_TRACE)   ? io_type::TRACE_DMA : io_type::GMIO);
             gmio.id = dma_node.second.get<uint32_t>("id", 0);
             gmio.shimColumn = dma_node.second.get<uint8_t>("shim_column");
             gmio.channelNum = dma_node.second.get<uint8_t>("channel_number");
