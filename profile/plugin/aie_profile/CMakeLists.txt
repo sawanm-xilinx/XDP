@@ -34,7 +34,7 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
   message("AIEBU_SOURCE_DIR = ${AIEBU_SOURCE_DIR}")
 
   set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_profile/client")
-  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
     file(GLOB AIE_PROFILE_IMPL_FILES
       "${IMPL_DIR}/aie_profile_npu3.h"
       "${IMPL_DIR}/aie_profile_npu3.cpp"
@@ -57,7 +57,7 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
   target_link_libraries(xdp_aie_profile_plugin PRIVATE 
                         xdp_core xrt_coreutil xaiengine aiebu_library_objects)
   target_compile_definitions(xdp_aie_profile_plugin PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
-  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
     target_compile_definitions(xdp_aie_profile_plugin PRIVATE XDP_NPU3_BUILD=1)
   endif()
   target_include_directories(xdp_aie_profile_plugin PRIVATE 

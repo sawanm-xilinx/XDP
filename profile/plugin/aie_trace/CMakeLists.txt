@@ -37,7 +37,7 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
     "${PROFILE_DIR}/device/common/*.cpp"
   )
 
-  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
     file(GLOB AIE_TRACE_COMPONENT_FILES
       "${OFFLOAD_DIR}/aie_trace_offload_npu3.h"
       "${OFFLOAD_DIR}/aie_trace_offload_npu3.cpp"
@@ -65,14 +65,14 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
   add_library(xdp_aie_trace_plugin SHARED xdp_aie_trace_plugin-version.rc
     ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_DRIVER_COMMON_UTIL_FILES})
   add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
-  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
     target_link_libraries(xdp_aie_trace_plugin PRIVATE
                           xdp_core xrt_coreutil xaiengine aiebu_library_objects)
   else()
     target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
   endif()
   target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
-  if (XDP_NPU3_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
     target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_NPU3_BUILD=1)
   endif()
   target_include_directories(xdp_aie_trace_plugin PRIVATE
