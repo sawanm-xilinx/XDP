@@ -63,7 +63,8 @@ class AieProfileMetadata {
           "input_stalls", "output_stalls", "s2mm_stalls", 
           "mm2s_stalls", "packets", METRIC_BYTE_COUNT,
           "uc_dma_activity", "uc_axis_throughputs", "uc_core",
-          "throughputs", "dma_throughputs", "trace_dma"}
+          "throughputs", "dma_throughputs", "trace_dma",
+          "ddr_bandwidth", "read_bandwidth", "write_bandwidth"}
       },
       {
         module_type::mem_tile, {

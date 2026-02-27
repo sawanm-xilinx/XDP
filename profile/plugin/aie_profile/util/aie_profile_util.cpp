@@ -159,6 +159,10 @@ namespace xdp::aie::profile {
     eventSets = {
       {METRIC_BYTE_COUNT,                {XAIE_EVENT_PORT_RUNNING_0_PL, XAIE_EVENT_PORT_RUNNING_0_PL}},
       {METRIC_LATENCY,                   {XAIE_EVENT_PORT_RUNNING_0_PL, XAIE_EVENT_PORT_RUNNING_0_PL}},
+      {"read_bandwidth",                 {XAIE_EVENT_PORT_RUNNING_0_PL,     XAIE_EVENT_PORT_RUNNING_1_PL}},
+      {"write_bandwidth",                {XAIE_EVENT_PORT_RUNNING_0_PL,     XAIE_EVENT_PORT_RUNNING_1_PL}},
+      {"ddr_bandwidth",                  {XAIE_EVENT_PORT_RUNNING_0_PL,     XAIE_EVENT_PORT_RUNNING_1_PL,
+                                          XAIE_EVENT_PORT_RUNNING_2_PL,     XAIE_EVENT_PORT_RUNNING_3_PL}}
     };
 
     // Flexible sets based on number of counters

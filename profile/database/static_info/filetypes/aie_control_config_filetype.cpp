@@ -379,7 +379,10 @@ AIEControlConfigFiletype::getInterfaceTiles(const std::string& graphName,
             // Catch metric sets that don't follow above naming convention
             if ((metricStr != "packets") &&
                 (metricStr != METRIC_LATENCY) &&
-                (metricStr != METRIC_BYTE_COUNT))
+                (metricStr != METRIC_BYTE_COUNT) &&
+                (metricStr != "ddr_bandwidth") &&
+                (metricStr != "read_bandwidth") &&
+                (metricStr != "write_bandwidth"))
                 continue;
         }
 
@@ -405,19 +408,28 @@ AIEControlConfigFiletype::getInterfaceTiles(const std::string& graphName,
         auto it = std::find_if(tiles.begin(), tiles.end(), compareTileByLoc(tile));
         if (it != tiles.end()) {
             // Add to the existing lists of stream IDs and master/slave
-            it->stream_ids.push_back(streamId);
-            it->is_master_vec.push_back(isMaster);
+            if ((metricStr == "read_bandwidth") && (!isMaster)) {
+              it->stream_ids.push_back(streamId);
+              it->is_master_vec.push_back(isMaster);
+            } else if ((metricStr == "write_bandwidth") && (isMaster)) {
+              it->stream_ids.push_back(streamId);
+              it->is_master_vec.push_back(isMaster);
+            } else if ((metricStr != "read_bandwidth") && (metricStr != "write_bandwidth")) {
+              it->stream_ids.push_back(streamId);
+              it->is_master_vec.push_back(isMaster);
+            }
 
-            // Use direct indexing by streamId with bounds checking
-            if (streamId < it->port_names.size()) {
+            if (type == io_type::PLIO) {
+              // Use direct indexing by streamId with bounds checking
+              if (streamId < it->port_names.size()) {
                 it->port_names[streamId] = name;
-            } else {
+              } else {
                 xrt_core::message::send(severity_level::info, "XRT",
                     "Interface tile streamId " + std::to_string(streamId) +
                     " exceeds maximum ports (" + std::to_string(it->port_names.size()) +
                     "). Unable to store port name.");
+              }
             }
-
             // For GMIOs, also populate mm2s_names and s2mm_names using channelNum
             if (type == io_type::GMIO) {
                 if (channelNum < NUM_MEM_CHANNELS) {
@@ -429,9 +441,18 @@ AIEControlConfigFiletype::getInterfaceTiles(const std::string& graphName,
             }
         }
         else {
-            // Add first stream ID and master/slave to vectors
-            tile.stream_ids.push_back(streamId);
-            tile.is_master_vec.push_back(isMaster);
+            // Add first stream ID and master/slave to vectors for new tile
+            if ((metricStr == "read_bandwidth") && (!isMaster)) {
+                tile.stream_ids.push_back(streamId);
+                tile.is_master_vec.push_back(isMaster);
+            } else if ((metricStr == "write_bandwidth") && (isMaster)) {
+                tile.stream_ids.push_back(streamId);
+                tile.is_master_vec.push_back(isMaster);
+            }
+            else if ((metricStr != "read_bandwidth") && (metricStr != "write_bandwidth")) {
+                tile.stream_ids.push_back(streamId);
+                tile.is_master_vec.push_back(isMaster);
+            }
 
             // Set port name at specific index with bounds checking
             if (streamId < tile.port_names.size()) {
