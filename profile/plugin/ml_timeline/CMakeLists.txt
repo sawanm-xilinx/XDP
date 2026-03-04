@@ -23,33 +23,33 @@ file(GLOB ML_TIMELINE_PLUGIN_FILES
 )
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
-  xrt_configure_version_file(xdp_ml_timeline_plugin SHARED)
-  add_library(xdp_ml_timeline_plugin SHARED xdp_ml_timeline_plugin-version.rc ${ML_TIMELINE_PLUGIN_FILES})
-  add_dependencies(xdp_ml_timeline_plugin xdp_core xrt_coreutil)
+  xrt_configure_version_file(xdp_ml_timeline_plugin${XDP_SUFFIX} SHARED)
+  add_library(xdp_ml_timeline_plugin${XDP_SUFFIX} SHARED xdp_ml_timeline_plugin${XDP_SUFFIX}-version.rc ${ML_TIMELINE_PLUGIN_FILES})
+  add_dependencies(xdp_ml_timeline_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
 
-  target_link_libraries(xdp_ml_timeline_plugin PRIVATE xdp_core xrt_coreutil)
+  target_link_libraries(xdp_ml_timeline_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil)
 
-  target_compile_definitions(xdp_ml_timeline_plugin PRIVATE XDP_CLIENT_BUILD=1)
+  target_compile_definitions(xdp_ml_timeline_plugin${XDP_SUFFIX} PRIVATE XDP_CLIENT_BUILD=1)
 
-  set_target_properties(xdp_ml_timeline_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  set_target_properties(xdp_ml_timeline_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-  install (TARGETS xdp_ml_timeline_plugin
+  install (TARGETS xdp_ml_timeline_plugin${XDP_SUFFIX}
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )
 
 elseif (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
 
-add_library(xdp_ml_timeline_plugin SHARED ${ML_TIMELINE_PLUGIN_FILES})
-add_dependencies(xdp_ml_timeline_plugin xdp_core xrt_coreutil)
+add_library(xdp_ml_timeline_plugin${XDP_SUFFIX} SHARED ${ML_TIMELINE_PLUGIN_FILES})
+add_dependencies(xdp_ml_timeline_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
 
-target_link_libraries(xdp_ml_timeline_plugin PRIVATE xdp_core xrt_coreutil)
+target_link_libraries(xdp_ml_timeline_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil)
 
-target_compile_definitions(xdp_ml_timeline_plugin PRIVATE XDP_VE2_BUILD=1)
+target_compile_definitions(xdp_ml_timeline_plugin${XDP_SUFFIX} PRIVATE XDP_VE2_BUILD=1)
 
-set_target_properties(xdp_ml_timeline_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+set_target_properties(xdp_ml_timeline_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-install (TARGETS xdp_ml_timeline_plugin
+install (TARGETS xdp_ml_timeline_plugin${XDP_SUFFIX}
   RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
   LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
 )

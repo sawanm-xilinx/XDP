@@ -30,25 +30,23 @@ file(GLOB XDP_CORE_FILES
   "${PROFILE_DIR}/writer/vp_base/*.cpp"
   )
 
-xrt_configure_version_file(xdp_core SHARED)
-add_library(xdp_core SHARED xdp_core-version.rc ${XDP_CORE_FILES})
-add_dependencies(xdp_core xrt_coreutil)
+xrt_configure_version_file(xdp_core${XDP_SUFFIX} SHARED)
+add_library(xdp_core${XDP_SUFFIX} SHARED xdp_core${XDP_SUFFIX}-version.rc ${XDP_CORE_FILES})
+add_dependencies(xdp_core${XDP_SUFFIX} xrt_coreutil)
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
-  target_compile_definitions(xdp_core PRIVATE XDP_CLIENT_BUILD=1)
+  target_compile_definitions(xdp_core${XDP_SUFFIX} PRIVATE XDP_CLIENT_BUILD=1)
 endif()
 
 if (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
-  target_compile_definitions(xdp_core PRIVATE XDP_VE2_BUILD=1)
+  target_compile_definitions(xdp_core${XDP_SUFFIX} PRIVATE XDP_VE2_BUILD=1)
 endif()
 
-target_link_libraries(xdp_core PRIVATE xrt_coreutil)
+target_link_libraries(xdp_core${XDP_SUFFIX} PRIVATE xrt_coreutil)
 
-set_target_properties(xdp_core PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+set_target_properties(xdp_core${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-# xdp_core is not an end-user link library, so skip the name link
-# and do not add to xrt-targets.
-install(TARGETS xdp_core
+install(TARGETS xdp_core${XDP_SUFFIX}
   RUNTIME DESTINATION ${XRT_INSTALL_BIN_DIR} COMPONENT ${XRT_COMPONENT}
   LIBRARY DESTINATION ${XRT_INSTALL_LIB_DIR} COMPONENT ${XRT_COMPONENT} NAMELINK_SKIP)
 

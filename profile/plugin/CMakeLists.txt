@@ -28,9 +28,9 @@ elseif (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
 
   if (XDP_NPU3_BUILD_CMAKE)
     add_custom_target(xdp_npu3_target ALL DEPENDS
-                      xdp_aie_halt_plugin 
-                      xdp_aie_profile_plugin 
-                      xdp_aie_trace_plugin)
+                      xdp_aie_halt_plugin${XDP_SUFFIX}
+                      xdp_aie_profile_plugin${XDP_SUFFIX}
+                      xdp_aie_trace_plugin${XDP_SUFFIX})
   endif()
    
 else()

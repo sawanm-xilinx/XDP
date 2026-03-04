@@ -61,25 +61,25 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
     )
   endif()
 
-  xrt_configure_version_file(xdp_aie_trace_plugin SHARED)
-  add_library(xdp_aie_trace_plugin SHARED xdp_aie_trace_plugin-version.rc
+  xrt_configure_version_file(xdp_aie_trace_plugin${XDP_SUFFIX} SHARED)
+  add_library(xdp_aie_trace_plugin${XDP_SUFFIX} SHARED xdp_aie_trace_plugin${XDP_SUFFIX}-version.rc
     ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_DRIVER_COMMON_UTIL_FILES})
-  add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
+  add_dependencies(xdp_aie_trace_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
   if (XDP_NPU3_BUILD_CMAKE)
-    target_link_libraries(xdp_aie_trace_plugin PRIVATE
-                          xdp_core xrt_coreutil xaiengine aiebu_library_objects)
+    target_link_libraries(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE
+                          xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX} aiebu_library_objects)
   else()
-    target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
+    target_link_libraries(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
   endif()
-  target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
+  target_compile_definitions(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
   if (XDP_NPU3_BUILD_CMAKE)
-    target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_NPU3_BUILD=1)
+    target_compile_definitions(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE XDP_NPU3_BUILD=1)
   endif()
-  target_include_directories(xdp_aie_trace_plugin PRIVATE
+  target_include_directories(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE
                              ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
-  set_target_properties(xdp_aie_trace_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  set_target_properties(xdp_aie_trace_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-  install (TARGETS xdp_aie_trace_plugin
+  install (TARGETS xdp_aie_trace_plugin${XDP_SUFFIX}
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )
@@ -98,15 +98,15 @@ elseif (DEFINED XRT_AIE_BUILD AND (NOT XRT_EDGE))
     "${IMPL_DIR}/*.cpp"
   )
 
-  xrt_configure_version_file(xdp_aie_trace_plugin SHARED)
-  add_library(xdp_aie_trace_plugin SHARED xdp_aie_trace_plugin-version.rc
+  xrt_configure_version_file(xdp_aie_trace_plugin${XDP_SUFFIX} SHARED)
+  add_library(xdp_aie_trace_plugin${XDP_SUFFIX} SHARED xdp_aie_trace_plugin${XDP_SUFFIX}-version.rc
     ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES})
-  add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
-  target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil)
-  target_compile_definitions(xdp_aie_trace_plugin PRIVATE XRT_X86_BUILD=1)
-  set_target_properties(xdp_aie_trace_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  add_dependencies(xdp_aie_trace_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
+  target_link_libraries(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil)
+  target_compile_definitions(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE XRT_X86_BUILD=1)
+  set_target_properties(xdp_aie_trace_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-  install (TARGETS xdp_aie_trace_plugin
+  install (TARGETS xdp_aie_trace_plugin${XDP_SUFFIX}
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )  
@@ -126,15 +126,15 @@ else()
       "${IMPL_DIR}/*.cpp"
     )
 
-    add_library(xdp_aie_trace_plugin_xdna SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} 
+    add_library(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} 
                 ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
-    add_dependencies(xdp_aie_trace_plugin_xdna xdp_core xrt_coreutil)
-    target_link_libraries(xdp_aie_trace_plugin_xdna PRIVATE xdp_core xrt_coreutil xaiengine)
-    target_compile_definitions(xdp_aie_trace_plugin_xdna PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
-    target_include_directories(xdp_aie_trace_plugin_xdna PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    set_target_properties(xdp_aie_trace_plugin_xdna PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+    add_dependencies(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
+    target_link_libraries(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
+    target_compile_definitions(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
+    target_include_directories(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(xdp_aie_trace_plugin_xdna${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-    install (TARGETS xdp_aie_trace_plugin_xdna
+    install (TARGETS xdp_aie_trace_plugin_xdna${XDP_SUFFIX}
       RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
       LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
     )
@@ -153,17 +153,17 @@ else()
       "${IMPL_DIR}/*.cpp"
     )
 
-    add_library(xdp_aie_trace_plugin SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
-    add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
-    target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
+    add_library(xdp_aie_trace_plugin${XDP_SUFFIX} SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
+    add_dependencies(xdp_aie_trace_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
+    target_link_libraries(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
     if (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
-      target_compile_definitions(xdp_aie_trace_plugin PRIVATE XDP_VE2_ZOCL_BUILD=1 FAL_LINUX="on")
+      target_compile_definitions(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE XDP_VE2_ZOCL_BUILD=1 FAL_LINUX="on")
     else()
-      target_compile_definitions(xdp_aie_trace_plugin PRIVATE FAL_LINUX="on")
+      target_compile_definitions(xdp_aie_trace_plugin${XDP_SUFFIX} PRIVATE FAL_LINUX="on")
     endif()
-    set_target_properties(xdp_aie_trace_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+    set_target_properties(xdp_aie_trace_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-    install (TARGETS xdp_aie_trace_plugin
+    install (TARGETS xdp_aie_trace_plugin${XDP_SUFFIX}
       RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
       LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
     )
