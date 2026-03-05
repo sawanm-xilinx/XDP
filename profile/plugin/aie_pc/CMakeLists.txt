@@ -26,17 +26,32 @@ file(GLOB XDP_DEVICE_COMMON_FILES
 )
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
-  xrt_configure_version_file(xdp_aie_pc_plugin${XDP_SUFFIX} SHARED)
-  add_library(xdp_aie_pc_plugin${XDP_SUFFIX} SHARED xdp_aie_pc_plugin${XDP_SUFFIX}-version.rc
-    ${XDP_AIE_PC_PLUGIN_FILES} ${XDP_DEVICE_COMMON_FILES})
-  add_dependencies(xdp_aie_pc_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
-  target_link_libraries(xdp_aie_pc_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
-  target_compile_definitions(xdp_aie_pc_plugin${XDP_SUFFIX} PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
-  target_include_directories(xdp_aie_pc_plugin${XDP_SUFFIX} PRIVATE
-                             ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
-  set_target_properties(xdp_aie_pc_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  if (XDP_NPU3_BUILD_CMAKE)
+    set(AIE_PC_PLUGIN_TARGET xdp_aie_pc_plugin${XDP_SUFFIX})
+    set(XDP_CORE_TARGET xdp_core${XDP_SUFFIX})
+  else()
+    set(AIE_PC_PLUGIN_TARGET xdp_aie_pc_plugin)
+    set(XDP_CORE_TARGET xdp_core)
+  endif()
 
-  install (TARGETS xdp_aie_pc_plugin${XDP_SUFFIX}
+  xrt_configure_version_file(${AIE_PC_PLUGIN_TARGET} SHARED)
+  add_library(${AIE_PC_PLUGIN_TARGET} SHARED ${AIE_PC_PLUGIN_TARGET}-version.rc
+    ${XDP_AIE_PC_PLUGIN_FILES} ${XDP_DEVICE_COMMON_FILES})
+  add_dependencies(${AIE_PC_PLUGIN_TARGET} ${XDP_CORE_TARGET} xrt_coreutil)
+  if (XDP_NPU3_BUILD_CMAKE)
+    target_link_libraries(${AIE_PC_PLUGIN_TARGET} PRIVATE ${XDP_CORE_TARGET} xrt_coreutil aie_codegen)
+  else()
+    target_link_libraries(${AIE_PC_PLUGIN_TARGET} PRIVATE ${XDP_CORE_TARGET} xrt_coreutil xaiengine)
+  endif()
+  target_compile_definitions(${AIE_PC_PLUGIN_TARGET} PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
+  if (XDP_NPU3_BUILD_CMAKE)
+    target_compile_definitions(${AIE_PC_PLUGIN_TARGET} PRIVATE XDP_NPU3_BUILD=1)
+  endif()
+  target_include_directories(${AIE_PC_PLUGIN_TARGET} PRIVATE
+                             ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
+  set_target_properties(${AIE_PC_PLUGIN_TARGET} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+
+  install (TARGETS ${AIE_PC_PLUGIN_TARGET}
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )

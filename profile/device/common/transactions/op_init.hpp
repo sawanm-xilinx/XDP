@@ -3,7 +3,11 @@
 #ifndef __OPINIT_HPP__
 #define __OPINIT_HPP__
 
+#if defined(XDP_NPU3_BUILD)
+#include <aie_codegen.h>
+#else
 #include <xaiengine.h>
+#endif
 
 #include "op_types.h"
 #include <cstring>

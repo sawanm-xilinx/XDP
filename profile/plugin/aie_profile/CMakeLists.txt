@@ -31,6 +31,14 @@ file(GLOB AIE_DRIVER_COMMON_UTIL_FILES
 )
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
+  if (XDP_NPU3_BUILD_CMAKE)
+    set(AIE_PROFILE_PLUGIN_TARGET xdp_aie_profile_plugin${XDP_SUFFIX})
+    set(XDP_CORE_TARGET xdp_core${XDP_SUFFIX})
+  else()
+    set(AIE_PROFILE_PLUGIN_TARGET xdp_aie_profile_plugin)
+    set(XDP_CORE_TARGET xdp_core)
+  endif()
+
   message("AIEBU_SOURCE_DIR = ${AIEBU_SOURCE_DIR}")
 
   set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_profile/client")
@@ -38,33 +46,37 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
     file(GLOB AIE_PROFILE_IMPL_FILES
       "${IMPL_DIR}/aie_profile_npu3.h"
       "${IMPL_DIR}/aie_profile_npu3.cpp"
-      "${IMPL_DIR}/aie_profile.h"
-      "${IMPL_DIR}/aie_profile.cpp"
       "${PROFILE_DIR}/device/common/npu3/*"
     )
   else()
     file(GLOB AIE_PROFILE_IMPL_FILES
-      "${IMPL_DIR}/*.h"
-      "${IMPL_DIR}/*.cpp"
+      "${IMPL_DIR}/aie_profile.h"
+      "${IMPL_DIR}/aie_profile.cpp"
     )
   endif()
 
-  xrt_configure_version_file(xdp_aie_profile_plugin${XDP_SUFFIX} SHARED)
-  add_library(xdp_aie_profile_plugin${XDP_SUFFIX} SHARED xdp_aie_profile_plugin${XDP_SUFFIX}-version.rc
+  xrt_configure_version_file(${AIE_PROFILE_PLUGIN_TARGET} SHARED)
+  add_library(${AIE_PROFILE_PLUGIN_TARGET} SHARED ${AIE_PROFILE_PLUGIN_TARGET}-version.rc
     ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES} 
               ${AIE_DRIVER_COMMON_UTIL_FILES} ${AIE_PROFILE_UTIL_FILES})
-  add_dependencies(xdp_aie_profile_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
-  target_link_libraries(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE 
-                        xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX} aiebu_library_objects)
-  target_compile_definitions(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
+  add_dependencies(${AIE_PROFILE_PLUGIN_TARGET} ${XDP_CORE_TARGET} xrt_coreutil)
   if (XDP_NPU3_BUILD_CMAKE)
-    target_compile_definitions(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE XDP_NPU3_BUILD=1)
+    target_link_libraries(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE
+                          aie_codegen aiebu_library_objects
+                          ${XDP_CORE_TARGET} xrt_coreutil)
+  else()
+    target_link_libraries(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE 
+                          ${XDP_CORE_TARGET} xrt_coreutil xaiengine)
   endif()
-  target_include_directories(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE 
+  target_compile_definitions(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE XDP_CLIENT_BUILD=1 -DXAIE_FEATURE_MSVC)
+  if (XDP_NPU3_BUILD_CMAKE)
+    target_compile_definitions(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE XDP_NPU3_BUILD=1)
+  endif()
+  target_include_directories(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE 
                              ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
-  set_target_properties(xdp_aie_profile_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  set_target_properties(${AIE_PROFILE_PLUGIN_TARGET} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-  install (TARGETS xdp_aie_profile_plugin${XDP_SUFFIX}
+  install (TARGETS ${AIE_PROFILE_PLUGIN_TARGET}
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )
@@ -76,16 +88,16 @@ elseif (DEFINED XRT_AIE_BUILD AND (NOT XRT_EDGE))
     "${IMPL_DIR}/*.h"
     "${IMPL_DIR}/*.cpp"
   )
-  xrt_configure_version_file(xdp_aie_profile_plugin${XDP_SUFFIX} SHARED)
-  add_library(xdp_aie_profile_plugin${XDP_SUFFIX} SHARED xdp_aie_profile_plugin${XDP_SUFFIX}-version.rc
+  xrt_configure_version_file(xdp_aie_profile_plugin SHARED)
+  add_library(xdp_aie_profile_plugin SHARED xdp_aie_profile_plugin-version.rc
     ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES})
-  add_dependencies(xdp_aie_profile_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
-  target_link_libraries(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil)
-  target_compile_definitions(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE XRT_X86_BUILD=1)
+  add_dependencies(xdp_aie_profile_plugin xdp_core xrt_coreutil)
+  target_link_libraries(xdp_aie_profile_plugin PRIVATE xdp_core xrt_coreutil)
+  target_compile_definitions(xdp_aie_profile_plugin PRIVATE XRT_X86_BUILD=1)
 
-  set_target_properties(xdp_aie_profile_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+  set_target_properties(xdp_aie_profile_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-  install (TARGETS xdp_aie_profile_plugin${XDP_SUFFIX}
+  install (TARGETS xdp_aie_profile_plugin
     RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
     LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
   )
@@ -99,15 +111,15 @@ else()
       "${IMPL_DIR}/*.h"
       "${IMPL_DIR}/*.cpp"
     )
-    add_library(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} SHARED ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES} 
+    add_library(xdp_aie_profile_plugin_xdna SHARED ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES} 
                 ${AIE_PROFILE_UTIL_FILES} ${AIE_PROFILE_CONFIG_FILES})
-    add_dependencies(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
-    target_link_libraries(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
-    target_compile_definitions(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
-    target_include_directories(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    set_target_properties(xdp_aie_profile_plugin_xdna${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
+    add_dependencies(xdp_aie_profile_plugin_xdna xdp_core xrt_coreutil)
+    target_link_libraries(xdp_aie_profile_plugin_xdna PRIVATE xdp_core xrt_coreutil xaiengine)
+    target_compile_definitions(xdp_aie_profile_plugin_xdna PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
+    target_include_directories(xdp_aie_profile_plugin_xdna PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(xdp_aie_profile_plugin_xdna PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
-    install (TARGETS xdp_aie_profile_plugin_xdna${XDP_SUFFIX}
+    install (TARGETS xdp_aie_profile_plugin_xdna
       RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
       LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
     )
@@ -121,19 +133,19 @@ else()
       "${IMPL_DIR}/*.cpp"
     )
 
-    add_library(xdp_aie_profile_plugin${XDP_SUFFIX} SHARED ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES} 
+    add_library(xdp_aie_profile_plugin SHARED ${AIE_PROFILE_PLUGIN_FILES} ${AIE_PROFILE_IMPL_FILES} 
                 ${AIE_PROFILE_UTIL_FILES} ${AIE_PROFILE_CONFIG_FILES})
-    add_dependencies(xdp_aie_profile_plugin${XDP_SUFFIX} xdp_core${XDP_SUFFIX} xrt_coreutil)
-    target_link_libraries(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE xdp_core${XDP_SUFFIX} xrt_coreutil xaiengine${XDP_SUFFIX})
+    add_dependencies(xdp_aie_profile_plugin xdp_core xrt_coreutil)
+    target_link_libraries(xdp_aie_profile_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
     if (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
-      target_compile_definitions(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE XDP_VE2_ZOCL_BUILD=1 FAL_LINUX="on")
+      target_compile_definitions(xdp_aie_profile_plugin PRIVATE XDP_VE2_ZOCL_BUILD=1 FAL_LINUX="on")
     else()
-      target_compile_definitions(xdp_aie_profile_plugin${XDP_SUFFIX} PRIVATE FAL_LINUX="on")
+      target_compile_definitions(xdp_aie_profile_plugin PRIVATE FAL_LINUX="on")
     endif()
-    set_target_properties(xdp_aie_profile_plugin${XDP_SUFFIX} PROPERTIES VERSION ${XRT_VERSION_STRING} 
+    set_target_properties(xdp_aie_profile_plugin PROPERTIES VERSION ${XRT_VERSION_STRING} 
                           SOVERSION ${XRT_SOVERSION})
 
-    install (TARGETS xdp_aie_profile_plugin${XDP_SUFFIX}
+    install (TARGETS xdp_aie_profile_plugin
       RUNTIME DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT}
       LIBRARY DESTINATION ${XDP_PLUGIN_INSTALL_DIR} COMPONENT ${XRT_COMPONENT} ${XRT_NAMELINK_SKIP}
     )

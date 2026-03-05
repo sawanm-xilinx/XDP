@@ -21,8 +21,13 @@
 #include "xdp/profile/plugin/aie_pc/aie_pc_impl.h"
 
 extern "C" {
+  #if defined(XDP_NPU3_BUILD)
+  #include <aie_codegen.h>
+  #include <aie_codegen_inc/xaiegbl_params.h>
+  #else
   #include <xaiengine.h>
   #include <xaiengine/xaiegbl_params.h>
+  #endif
 }
 
 #include<map>

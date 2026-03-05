@@ -11,8 +11,13 @@
 #include "xdp/profile/database/static_info/aie_constructs.h"
 
 extern "C" {
+#if defined(XDP_NPU3_BUILD)
+#include <aie_codegen.h>
+#include <aie_codegen_inc/xaiegbl_params.h>
+#else
 #include <xaiengine.h>
 #include <xaiengine/xaiegbl_params.h>
+#endif
 }
 
 namespace xdp::aie::profile {  

@@ -16,8 +16,8 @@
 #include "xrt/xrt_bo.h"
 
 extern "C" {
-#include <xaiengine.h>
-#include <xaiengine/xaiegbl_params.h>
+#include <aie_codegen.h>
+#include <aie_codegen_inc/xaiegbl_params.h>
 }
 
 namespace xdp {

@@ -169,11 +169,10 @@ namespace xdp {
     xrt::hw_context context = xrt_core::hw_context_int::create_hw_context_from_implementation(handle);
     metadata->setHwContext(context);
   #ifdef XDP_NPU3_BUILD
-    if (aie::isNPU3(metadata->getHardwareGen()))
-      implementation = std::make_unique<AieProfile_NPU3Impl>(db, metadata, deviceID);
-    else
+    implementation = std::make_unique<AieProfile_NPU3Impl>(db, metadata, deviceID);
+  #else
+    implementation = std::make_unique<AieProfile_WinImpl>(db, metadata, deviceID);
   #endif
-      implementation = std::make_unique<AieProfile_WinImpl>(db, metadata, deviceID);
 #elif XRT_X86_BUILD
     implementation = std::make_unique<AieProfile_x86Impl>(db, metadata, deviceID);
 #elif XDP_VE2_BUILD
