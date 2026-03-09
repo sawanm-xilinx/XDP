@@ -18,6 +18,12 @@ if (NOT WIN32)
 else()
 
   include_directories(
+    ${XRT_SOURCE_DIR}/runtime_src
+    ${XRT_SOURCE_DIR}/runtime_src/core/include
+    ${XRT_BINARY_DIR}/gen
+    ${XRT_BINARY_DIR}
+  )
+  include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${Boost_INCLUDE_DIRS}
     ${XRT_SOURCE_DIR}/include/1_2

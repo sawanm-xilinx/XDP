@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2022-2025 Advanced Micro Devices, Inc.  All rights reserved.
+# Copyright (C) 2022-2026 Advanced Micro Devices, Inc.  All rights reserved.
 #
 
 # ====================================================================
@@ -25,6 +25,10 @@ file(GLOB AIE_TRACE_UTIL_FILES
 file(GLOB AIE_TRACE_CONFIG_FILES
   "${PROFILE_DIR}/plugin/aie_trace/util/aie_trace_config.h"
   "${PROFILE_DIR}/plugin/aie_trace/util/aie_trace_config.cpp"
+)
+file(GLOB AIE_JSON_PARSER_FILES
+  "${PROFILE_DIR}/database/parser/*.h"
+  "${PROFILE_DIR}/database/parser/*.cpp"
 )
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
@@ -70,7 +74,8 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
 
   xrt_configure_version_file(${AIE_TRACE_PLUGIN_TARGET} SHARED)
   add_library(${AIE_TRACE_PLUGIN_TARGET} SHARED ${AIE_TRACE_PLUGIN_TARGET}-version.rc
-    ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_DRIVER_COMMON_UTIL_FILES})
+              ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} 
+              ${AIE_DRIVER_COMMON_UTIL_FILES} ${AIE_JSON_PARSER_FILES})
   add_dependencies(${AIE_TRACE_PLUGIN_TARGET} ${XDP_CORE_TARGET} xrt_coreutil)
   if (XDP_NPU3_BUILD_CMAKE)
     target_link_libraries(${AIE_TRACE_PLUGIN_TARGET} PRIVATE
@@ -108,7 +113,7 @@ elseif (DEFINED XRT_AIE_BUILD AND (NOT XRT_EDGE))
 
   xrt_configure_version_file(xdp_aie_trace_plugin SHARED)
   add_library(xdp_aie_trace_plugin SHARED xdp_aie_trace_plugin-version.rc
-    ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES})
+    ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_JSON_PARSER_FILES})
   add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
   target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil)
   target_compile_definitions(xdp_aie_trace_plugin PRIVATE XRT_X86_BUILD=1)
@@ -135,7 +140,7 @@ else()
     )
 
     add_library(xdp_aie_trace_plugin_xdna SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} 
-                ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
+                ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES} ${AIE_JSON_PARSER_FILES})
     add_dependencies(xdp_aie_trace_plugin_xdna xdp_core xrt_coreutil)
     target_link_libraries(xdp_aie_trace_plugin_xdna PRIVATE xdp_core xrt_coreutil xaiengine)
     target_compile_definitions(xdp_aie_trace_plugin_xdna PRIVATE XDP_VE2_BUILD=1 FAL_LINUX="on")
@@ -161,7 +166,8 @@ else()
       "${IMPL_DIR}/*.cpp"
     )
 
-    add_library(xdp_aie_trace_plugin SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES})
+    add_library(xdp_aie_trace_plugin SHARED ${AIE_TRACE_PLUGIN_FILES} ${AIE_TRACE_COMPONENT_FILES} 
+                ${AIE_TRACE_UTIL_FILES} ${AIE_TRACE_CONFIG_FILES} ${AIE_JSON_PARSER_FILES})
     add_dependencies(xdp_aie_trace_plugin xdp_core xrt_coreutil)
     target_link_libraries(xdp_aie_trace_plugin PRIVATE xdp_core xrt_coreutil xaiengine)
     if (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
