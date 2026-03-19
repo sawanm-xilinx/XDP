@@ -7,24 +7,34 @@
 # the start. It is currently built on Client and VE2
 # =========================================================================
 
-if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
-  set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_halt/clientDev")
-
+if (XDP_NPU3_BUILD_CMAKE)
+  set(IMPL_SUFFIX "_npu3")
+  set(IMPL_DIR "clientDev")
+  file(GLOB XDP_DEVICE_COMMON_FILES
+    "${PROFILE_DIR}/device/common/npu3/*.h"
+    "${PROFILE_DIR}/device/common/npu3/*.cpp"
+  )
+elseif (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
+  set(IMPL_SUFFIX "")
+  set(IMPL_DIR "clientDev")
+  file(GLOB XDP_DEVICE_COMMON_FILES
+    "${PROFILE_DIR}/device/common/*.h"
+    "${PROFILE_DIR}/device/common/*.cpp"
+  )
 elseif (XDP_VE2_BUILD_CMAKE STREQUAL "yes")
-  set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_halt/ve2")
-  
+  set(IMPL_SUFFIX "")
+  set(IMPL_DIR "ve2")
+  file(GLOB XDP_DEVICE_COMMON_FILES
+    "${PROFILE_DIR}/device/common/*.h"
+    "${PROFILE_DIR}/device/common/*.cpp"
+  )
 endif()
 
 file(GLOB XDP_AIE_HALT_PLUGIN_FILES
   "${PROFILE_DIR}/plugin/aie_halt/*.h"
   "${PROFILE_DIR}/plugin/aie_halt/*.cpp"
-  "${IMPL_DIR}/*.h"
-  "${IMPL_DIR}/*.cpp"
-)
-
-file(GLOB XDP_DEVICE_COMMON_FILES
-  "${PROFILE_DIR}/device/common/*.h"
-  "${PROFILE_DIR}/device/common/*.cpp"
+  "${PROFILE_DIR}/plugin/aie_halt/${IMPL_DIR}/aie_halt${IMPL_SUFFIX}.h"
+  "${PROFILE_DIR}/plugin/aie_halt/${IMPL_DIR}/aie_halt${IMPL_SUFFIX}.cpp"
 )
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
