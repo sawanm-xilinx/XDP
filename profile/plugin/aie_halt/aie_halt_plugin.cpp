@@ -76,7 +76,7 @@ namespace xdp {
 
     // Only one device for Client Device flow
     uint64_t deviceId = db->addDevice("win_device");
-    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice, false);
+    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice);
     (db->getStaticInfo()).setDeviceName(deviceId, "win_device");
 
     DeviceDataEntry.valid = true;
@@ -86,6 +86,7 @@ namespace xdp {
     DeviceDataEntry.implementation = std::make_unique<AIEHaltClientDevImpl>(db);
     #endif
     DeviceDataEntry.implementation->setHwContext(hwContext);
+    DeviceDataEntry.implementation->setDeviceId(deviceId);
     DeviceDataEntry.implementation->updateDevice(mHwCtxImpl);
 
 #elif defined(XDP_VE2_BUILD)

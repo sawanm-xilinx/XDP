@@ -28,6 +28,7 @@ namespace xdp {
     protected :
       VPDatabase* db = nullptr;
       xrt::hw_context mHwContext;
+      uint64_t mDeviceId = 0;
 
     public:
       AIEHaltImpl(VPDatabase* dB)
@@ -44,6 +45,11 @@ namespace xdp {
       void setHwContext(xrt::hw_context ctx)
       {
         mHwContext = std::move(ctx);
+      }
+
+      void setDeviceId(uint64_t id)
+      {
+        mDeviceId = id;
       }
   };
 

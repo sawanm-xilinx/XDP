@@ -46,12 +46,10 @@ namespace xdp {
 #pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
-  void AIEHaltNPU3Impl::updateDevice(void* hwCtxImpl)
+  void AIEHaltNPU3Impl::updateDevice(void* /*hwCtxImpl*/)
   {
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
               "In AIEHaltNPU3Impl::updateDevice");
-
-    xrt::hw_context hwContext = xrt_core::hw_context_int::create_hw_context_from_implementation(hwCtxImpl);
 
     // Two ways to run:
     //   1. Use pre-created elf
@@ -73,7 +71,7 @@ namespace xdp {
       xrt::module mod{haltElf};
       xrt::kernel krnl;
       try {
-        krnl = xrt::ext::kernel{hwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
+        krnl = xrt::ext::kernel{mHwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
       } catch (...) {
         xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
                   "XDP_KERNEL not found in HW Context. Cannot configure AIE to halt.");
@@ -94,34 +92,22 @@ namespace xdp {
       return;
     }
     
+    //
     // Create and submit control code to halt all cores
+    //
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
         "Creating AIE Halt control code");
 
     // Configure driver
-    boost::property_tree::ptree aieMetadata;
-    try {
-      auto device = xrt_core::hw_context_int::get_core_device(hwContext);
-      xrt::xclbin xrtXclbin = device.get()->get_xclbin(device.get()->get_xclbin_uuid());
-      auto data = xrt_core::xclbin_int::get_axlf_section(xrtXclbin, AIE_METADATA);
-
-      if (!data.first || !data.second) {
-        xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", "Empty AIE Metadata in xclbin");
-        return;
-      }
-
-      std::stringstream ss;
-      ss.write(data.first,data.second);
-
-      boost::property_tree::read_json(ss, aieMetadata);
-    } catch (const std::exception& e) {
-      std::string msg("AIE Metadata could not be read/processed from xclbin: ");
-      msg += e.what();
-      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", msg);
+    const xdp::aie::BaseFiletypeImpl *metadataReader = 
+      (db->getStaticInfo()).getAIEmetadataReader(mDeviceId);
+    if (!metadataReader) {
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", 
+        "Unable to get AIE metadata reader");
       return;
     }
 
-    xdp::aie::driver_config meta_config = xdp::aie::getDriverConfig(aieMetadata, "aie_metadata.driver_config");
+    auto meta_config = metadataReader->getDriverConfig();
 
     XAie_Config cfg {
       meta_config.hw_gen,
@@ -131,8 +117,6 @@ namespace xdp {
       meta_config.num_rows,
       meta_config.num_columns,
       meta_config.shim_row,
-      0,
-      1,
       meta_config.mem_row_start,
       meta_config.mem_num_rows,
       meta_config.aie_tile_row_start,
@@ -155,6 +139,11 @@ namespace xdp {
     uint8_t startRow = meta_config.aie_tile_row_start;
     uint8_t numRows = meta_config.aie_tile_num_rows;
 
+    std::stringstream msg;
+    msg << " Set AIE Core breakpoint at Lock Acquire Req Instr, Start col "
+        << +startCol << ", Num col " << +numCols << std::endl;
+    xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", msg.str());
+
     std::string tranxName = "AieHalt";
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
       "Starting transaction " + tranxName);
@@ -164,11 +153,6 @@ namespace xdp {
     if (!tranxHandler->initializeTransaction(&aieDevInst, tranxName))
       return;
 
-    std::stringstream msg;
-    msg << " Set AIE Core breakpoint at Lock Acquire Req Instr, Start col "
-        << +startCol << ", Num col " << +numCols << std::endl;
-    xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", msg.str());
-
     // Initial break on Event 82: Lock Acquire instruction
     constexpr uint32_t AIE_EVENT_INSTR_LOCK_ACQ_REQ = 0x52;
     uint32_t dbg_ctrl_1_reg = AIE_EVENT_INSTR_LOCK_ACQ_REQ << DEBUG_CONTROL1_DEBUG_HALT_CORE_EVENT0_LSB;
@@ -176,12 +160,16 @@ namespace xdp {
     for (uint8_t col = startCol; col < (startCol + numCols); col++) {
       for (uint8_t row = startRow; row < (startRow + numRows); row++) {
         auto tileOffset = XAie_GetTileAddr(&aieDevInst, row, col);
+        if (aie::isDebugVerbosity()) {
+          std::cout << "Writing debug halt control at tile (" << +col << ", " << +row << ") - writing 0x"
+                    << std::hex << dbg_ctrl_1_reg << " to 0x" << tileOffset << std::endl;
+        }
         XAie_Write32(&aieDevInst, tileOffset + npu3::cm_debug_control1, dbg_ctrl_1_reg);
         //XAie_CoreDebugHalt(&aieDevInst, XAie_TileLoc(col, row));
       }
     }
 
-    tranxHandler->submitTransaction(&aieDevInst, hwContext);
+    tranxHandler->submitTransaction(&aieDevInst, mHwContext);
     xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", 
                             "Successfully scheduled AIE Halt.");
   }
