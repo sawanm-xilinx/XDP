@@ -13,7 +13,6 @@
 
 #include "core/common/device.h"
 #include "core/common/message.h"
-#include "core/common/api/hw_context_int.h"
 #include "core/common/api/xclbin_int.h"
 #include "core/include/xclbin.h"
 #include "core/include/xrt/experimental/xrt_elf.h"
@@ -184,7 +183,11 @@ namespace xdp {
       }
     }
 
-    tranxHandler->submitTransaction(&aieDevInst, mHwContext);
+    if (!tranxHandler->submitTransaction(&aieDevInst, mHwContext)) {
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+                              "Failed to submit AIE Halt transaction.");
+      return;
+    }
     xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", 
                             "Successfully scheduled AIE Halt.");
   }

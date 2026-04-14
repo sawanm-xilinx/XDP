@@ -9,6 +9,7 @@
 
 #include "core/common/device.h"
 #include "core/common/message.h"
+#include "core/common/query_requests.h"
 #include "core/common/api/hw_context_int.h"
 
 #include "xdp/profile/plugin/aie_halt/aie_halt_plugin.h"
@@ -67,17 +68,48 @@ namespace xdp {
     mHwCtxImpl = hwCtxImpl;
 
     xrt::hw_context hwContext = xrt_core::hw_context_int::create_hw_context_from_implementation(mHwCtxImpl);
-    if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
-      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-          "AIE Halt Plugin is not yet supported for Full ELF flow.");
-      return;
-    }
     std::shared_ptr<xrt_core::device> coreDevice = xrt_core::hw_context_int::get_core_device(hwContext);
 
-    // Only one device for Client Device flow
-    uint64_t deviceId = db->addDevice("win_device");
-    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice);
-    (db->getStaticInfo()).setDeviceName(deviceId, "win_device");
+    bool isFullELFFlow = false;
+    try {
+      isFullELFFlow = xrt_core::hw_context_int::get_elf_flow(hwContext);
+    } catch (const std::exception& e) {
+      std::stringstream msg;
+      msg << e.what() << " AIE Halt cannot be enabled before complete configuration." << std::endl;
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", msg.str());
+      return;
+    }
+
+    uint64_t deviceId = 0;
+    if (isFullELFFlow) {
+#if defined(XDP_NPU3_BUILD)
+      xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
+          "AIE Halt Plugin: Full ELF flow on NPU3");
+      deviceId = (db->getStaticInfo()).getHwCtxImplUidElf(mHwCtxImpl);
+
+      std::string deviceName = "";
+      try {
+        deviceName = xrt_core::device_query<xrt_core::query::rom_vbnv>(coreDevice);
+      } catch (...) {
+        deviceName = "win_device";
+      }
+      try {
+        (db->getStaticInfo()).updateDeviceFromCoreDeviceElf(deviceId, coreDevice);
+      } catch (...) {
+        xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
+            "AIE Halt Plugin: aie_trace_config.json not available; using hardcoded NPU3 config");
+      }
+      (db->getStaticInfo()).setDeviceName(deviceId, deviceName);
+#else
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+          "AIE Halt Plugin is not yet supported for Full ELF flow on this device.");
+      return;
+#endif
+    } else {
+      deviceId = db->addDevice("win_device");
+      (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice);
+      (db->getStaticInfo()).setDeviceName(deviceId, "win_device");
+    }
 
     DeviceDataEntry.valid = true;
     #if defined(XDP_NPU3_BUILD)
