@@ -5,6 +5,7 @@
 
 #include "npu3_transaction.h"
 #include "core/common/message.h"
+#include "core/common/api/hw_context_int.h"
 #include "xrt/experimental/xrt_elf.h"
 #include "xrt/experimental/xrt_ext.h"
 #include "xrt/experimental/xrt_module.h"
@@ -155,16 +156,37 @@ namespace xdp::aie {
         }
 
         xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "Elf Object Created");
-        xrt::module mod{profileElf};
-
-        xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "Module Created");
         xrt::kernel kernel;
-        try {
-            kernel = xrt::ext::kernel{hwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
-        } catch (...) {
-            xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-            "XDP_KERNEL not found in HW Context. Unable to run " + getElfFileName());
-            return false;
+
+        if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
+            // Full ELF flow: register profiling ELF with hw_context,
+            // then create kernel by name from the ELF map
+            try {
+                hwContext.add_config(profileElf);
+                auto elfKernels = profileElf.get_kernels();
+                if (elfKernels.empty()) {
+                    xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+                        "No kernels found in " + getElfFileName());
+                    return false;
+                }
+                auto kernelName = elfKernels[0].get_name();
+                kernel = xrt::ext::kernel{hwContext, kernelName};
+            } catch (...) {
+                xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+                    "Failed to register " + getElfFileName() + " with HW Context.");
+                return false;
+            }
+        } else {
+            // Partial ELF flow: use module with xclbin-backed kernel
+            xrt::module mod{profileElf};
+            xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "Module Created");
+            try {
+                kernel = xrt::ext::kernel{hwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
+            } catch (...) {
+                xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+                    "XDP_KERNEL not found in HW Context. Unable to run " + getElfFileName());
+                return false;
+            }
         }
 
         xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "XDP_KERNEL created");
@@ -178,6 +200,16 @@ namespace xdp::aie {
 
         xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "Wait done!");
         return true;
+    }
+
+    int NPU3Transaction::getGroupID(int id, xrt::hw_context hwContext)
+    {
+        xrt::kernel kernel;
+        if (xrt_core::hw_context_int::get_elf_flow(hwContext))
+            kernel = xrt::ext::kernel(hwContext, "XDP_KERNEL");
+        else
+            kernel = xrt::kernel(hwContext, "XDP_KERNEL");
+        return kernel.group_id(id);
     }
 
     bool NPU3Transaction::submitTransaction(XAie_DevInst* aieDevInst, xrt::hw_context hwContext) 

@@ -22,6 +22,7 @@
 
 #include "core/include/xrt/xrt_hw_context.h"
 #include "core/include/xrt/xrt_kernel.h"
+#include "core/include/xrt/experimental/xrt_ext.h"
 
 namespace xdp::aie {
   class ClientTransaction {

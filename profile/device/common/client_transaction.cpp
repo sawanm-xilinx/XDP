@@ -20,6 +20,7 @@
 
 #include "client_transaction.h"
 #include "core/common/message.h"
+#include "core/common/api/hw_context_int.h"
 
 #include "transactions/op_buf.hpp"
 
@@ -45,7 +46,10 @@ namespace xdp::aie {
     ClientTransaction::initializeKernel(std::string kernelName) 
     {
       try {
-        kernel = xrt::kernel(context, kernelName);  
+        if (xrt_core::hw_context_int::get_elf_flow(context))
+          kernel = xrt::ext::kernel(context, kernelName);
+        else
+          kernel = xrt::kernel(context, kernelName);
       } catch (std::exception &e){
         std::stringstream msg;
         msg << "Unable to find " << kernelName << " kernel from hardware context. Failed to configure " << transactionName << ". " << e.what();
