@@ -66,18 +66,24 @@ namespace xdp {
     }
     mHwCtxImpl = hwCtxImpl;
 
+    std::cout << "!!!!!!!!!! Getting HW context and core device!" << std::endl;
+
     xrt::hw_context hwContext = xrt_core::hw_context_int::create_hw_context_from_implementation(mHwCtxImpl);
-    if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
-      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-          "AIE Halt Plugin is not yet supported for Full ELF flow.");
-      return;
-    }
+    //if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
+    //  xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+    //      "AIE Halt Plugin is not yet supported for Full ELF flow.");
+    //  return;
+    //}
     std::shared_ptr<xrt_core::device> coreDevice = xrt_core::hw_context_int::get_core_device(hwContext);
+
+    std::cout << "!!!!!!!!!! Updating device from client device" << std::endl;
 
     // Only one device for Client Device flow
     uint64_t deviceId = db->addDevice("win_device");
-    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice);
+    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice, false);
     (db->getStaticInfo()).setDeviceName(deviceId, "win_device");
+
+    std::cout << "!!!!!!!!!! Getting implementation" << std::endl;
 
     DeviceDataEntry.valid = true;
     #if defined(XDP_NPU3_BUILD)
@@ -87,7 +93,9 @@ namespace xdp {
     #endif
     DeviceDataEntry.implementation->setHwContext(hwContext);
     DeviceDataEntry.implementation->setDeviceId(deviceId);
+    std::cout << "!!!!!!!!!! Updating device" << std::endl;
     DeviceDataEntry.implementation->updateDevice(mHwCtxImpl);
+    std::cout << "!!!!!!!!!! Done" << std::endl;
 
 #elif defined(XDP_VE2_BUILD)
     if (mHwCtxImpl) {
