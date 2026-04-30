@@ -462,7 +462,8 @@ namespace xdp {
     {
       #ifdef XDP_VE2_BUILD
         // TODO: should we use updateDeviceFromCoreDeviceHwCtxFlow or updateDeviceFromCoreDevice
-        (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, mXrtCoreDevice);
+        (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, mXrtCoreDevice, true, nullptr,
+                                                         hw_context_flow ? handle : nullptr);
       #else
         (db->getStaticInfo()).updateDeviceFromHandle(deviceID, nullptr, handle);
       #endif

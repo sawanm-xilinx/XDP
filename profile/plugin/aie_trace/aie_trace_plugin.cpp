@@ -141,7 +141,7 @@ void AieTracePluginUnified::updateAIEDevice(void *handle, bool hw_context_flow) 
 
   // Update the static database with information from xclbin
 #ifdef XDP_CLIENT_BUILD
-  (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device);
+  (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device, true, nullptr, handle);
   (db->getStaticInfo()).setDeviceName(deviceID, "win_device");  
 #else
     if((db->getStaticInfo()).getAppStyle() == xdp::AppStyle::REGISTER_XCLBIN_STYLE)

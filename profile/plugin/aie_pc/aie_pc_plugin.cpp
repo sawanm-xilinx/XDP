@@ -77,7 +77,7 @@ namespace xdp {
 
     // Only one device for Client Device flow
     uint64_t deviceId = db->addDevice("win_device");
-    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice);
+    (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceId, coreDevice, true, nullptr, mHwCtxImpl);
     (db->getStaticInfo()).setDeviceName(deviceId, "win_device");
 
     DeviceDataEntry.valid = true;

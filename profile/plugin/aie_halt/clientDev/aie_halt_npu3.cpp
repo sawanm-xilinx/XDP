@@ -184,7 +184,11 @@ namespace xdp {
       }
     }
 
-    tranxHandler->submitTransaction(&aieDevInst, mHwContext);
+    if (!tranxHandler->submitTransaction(&aieDevInst, mHwContext)) {
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+                              "AIE Halt control transaction did not complete successfully.");
+      return;
+    }
     xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", 
                             "Successfully scheduled AIE Halt.");
   }

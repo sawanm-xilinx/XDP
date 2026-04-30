@@ -134,11 +134,11 @@ namespace xdp {
     // Update the static database with information from xclbin
     {
 #if defined(XDP_CLIENT_BUILD)
-      (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device);
+      (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device, true, nullptr, handle);
       (db->getStaticInfo()).setDeviceName(deviceID, "win_device");
 #elif defined(XDP_VE2_BUILD)
       // TODO: should we use updateDeviceFromCoreDeviceHwCtxFlow or updateDeviceFromCoreDevice
-      (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device);
+      (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, device, true, nullptr, handle);
       std::string deviceName = util::getDeviceName(handle,true);
       if (deviceName != "")
         (db->getStaticInfo()).setDeviceName(deviceID, deviceName);

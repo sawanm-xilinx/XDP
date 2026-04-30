@@ -2,6 +2,10 @@
 // Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved
 
 #include <sstream>
+#include <string>
+#include <cstdint>
+#include <cstring>
+#include <vector>
 
 #include "npu3_transaction.h"
 #include "core/common/message.h"
@@ -16,9 +20,9 @@
 #include "core/common/aiebu/src/cpp/include/aiebu/aiebu_error.h"
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <fstream>
-#include <iomanip>
 
 extern "C" {
     #include <aie_codegen.h>
@@ -27,6 +31,58 @@ extern "C" {
 
 namespace xdp::aie {
     using severity_level = xrt_core::message::severity_level;
+
+    // Load deployer-supplied xdp_kernel_full_elf.json (e.g. from XOAH xdp_xclbin/) and
+    // substitute __XDP_ASM_PATH__ / __XDP_INSTANCE_ID__. Searched: next to the .asm file,
+    // then ./ (read falls back to readfile on disk when file_artifact is empty).
+    static std::vector<char> load_xdp_kernel_full_elf_config(const std::string& asmFileName,
+                                                             const std::string& instance_id)
+    {
+      const std::filesystem::path asm_path{asmFileName};
+      const std::string asm_abs = std::filesystem::absolute(asm_path).generic_string();
+
+      const std::vector<std::filesystem::path> candidates = {
+        asm_path.parent_path() / "xdp_kernel_full_elf.json",
+        std::filesystem::path{"xdp_kernel_full_elf.json"},
+      };
+
+      std::string json_text;
+      for (const auto& c : candidates) {
+        if (!std::filesystem::exists(c))
+          continue;
+        std::ifstream jin(c.string(), std::ios::binary);
+        if (!jin)
+          continue;
+        jin.seekg(0, std::ios::end);
+        const auto sz = jin.tellg();
+        if (sz <= std::streampos(0))
+          continue;
+        jin.seekg(0, std::ios::beg);
+        json_text.resize(static_cast<std::size_t>(sz));
+        jin.read(json_text.data(), static_cast<std::streamsize>(sz));
+        if (static_cast<std::size_t>(jin.gcount()) != json_text.size())
+          continue;
+        break;
+      }
+
+      if (json_text.empty())
+        throw std::runtime_error("xdp_kernel_full_elf.json not found (searched next to asm and ./)");
+
+      static constexpr char kAsmPlaceholder[] = "__XDP_ASM_PATH__";
+      auto pos = json_text.find(kAsmPlaceholder);
+      if (pos == std::string::npos)
+        throw std::runtime_error("xdp_kernel_full_elf.json must contain " + std::string(kAsmPlaceholder));
+
+      json_text.replace(pos, sizeof(kAsmPlaceholder) - 1, asm_abs);
+
+      static constexpr char kInstPlaceholder[] = "__XDP_INSTANCE_ID__";
+      pos = json_text.find(kInstPlaceholder);
+      if (pos == std::string::npos)
+        throw std::runtime_error("xdp_kernel_full_elf.json must contain " + std::string(kInstPlaceholder));
+
+      json_text.replace(pos, sizeof(kInstPlaceholder) - 1, instance_id);
+      return {json_text.begin(), json_text.end()};
+    }
 
     bool NPU3Transaction::initializeTransaction(XAie_DevInst* aieDevInst, std::string tName) 
     {
@@ -67,48 +123,32 @@ namespace xdp::aie {
         return true;
     }
 
-    bool NPU3Transaction::generateELF() 
+    bool NPU3Transaction::generateELF()
     {
         //
-        // 2. Convert ASM to ELF
+        // 2. Convert ASM to full config ELF (aie4_config + xdp_kernel_full_elf.json)
         //
-        // Fill this vector with ASM content
-        std::vector<char> control_code_buf;
-        std::vector<std::string> libpaths;
-        libpaths.push_back("./");
-
         try {
 #if 1
-            //Read ASM file
-            std::string asmFileName = getAsmFileName();
+            const std::string asmFileName = getAsmFileName();
             if (!std::filesystem::exists(asmFileName))
                 throw std::runtime_error("file:" + asmFileName + " not found\n");
 
-            std::ifstream inAsm(asmFileName, std::ios::in | std::ios::binary);
             std::cout << "Open file " << asmFileName << std::endl;
 
-            auto file_size = std::filesystem::file_size(asmFileName);
-            control_code_buf.resize(file_size);
+            const std::vector<char> config_json =
+                load_xdp_kernel_full_elf_config(asmFileName, m_transactionName);
+            aiebu::file_artifact artifact;
+            const std::vector<std::string> flags{"disabledump"};
+            const aiebu::aiebu_assembler as(aiebu::aiebu_assembler::buffer_type::aie4_config,
+                                            config_json, artifact, flags);
 
-            inAsm.read(control_code_buf.data(), file_size);
-            std::streamsize bytesRead = inAsm.gcount();
-            if (static_cast<std::size_t>(bytesRead) != static_cast<std::size_t>(file_size)) {
-                std::cerr << "Read " << bytesRead << " bytes but expected " << file_size
-                                            << " for file " << asmFileName << '\n';
-                control_code_buf.resize(static_cast<std::size_t>(bytesRead)); // keep only read bytes
-            } else {
-                std::cout << "ASM file read (" << file_size << " bytes): " << asmFileName << '\n';
-            }
-
-            //Convert ASM to ELF data.
-            auto as = aiebu::aiebu_assembler(aiebu::aiebu_assembler::buffer_type::asm_aie4,
-                                             control_code_buf, std::vector<std::string>{}, libpaths);
-            
-            //Write elf data to a file
-            auto e = as.get_elf();
+            const auto e = as.get_elf();
             std::cout << "Elf size:" << e.size() << std::endl;
-            std::ofstream outElf(getElfFileName(), std::ios_base::binary);
-            outElf.write(e.data(), e.size());
+
+            std::ofstream outElf(getElfFileName(),
+                                  std::ios::binary | std::ios::out | std::ios::trunc);
+            outElf.write(e.data(), static_cast<std::streamsize>(e.size()));
 #else
             auto check1 = std::getenv("AIEBU_REPO");
             auto check2 = std::getenv("PYTHONPATH");
@@ -130,6 +170,11 @@ namespace xdp::aie {
             }
 #endif
         }
+        catch (const aiebu::error& e) {
+            xrt_core::message::send(xrt_core::message::severity_level::error, "XRT",
+                "AIEBU error generating Elf file: " + getElfFileName() + "\n" + e.what());
+            return false;
+        }
         catch(const std::exception& e) {
             xrt_core::message::send(xrt_core::message::severity_level::error, "XRT",
                 "Error in generating Elf file: " + getElfFileName() + "\n" + e.what());
@@ -145,6 +190,16 @@ namespace xdp::aie {
         //
         xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", 
             "Start New Control Code Elf");
+
+        bool full_elf_flow = false;
+        try {
+            full_elf_flow = xrt_core::hw_context_int::get_elf_flow(hwContext);
+        }
+        catch (const std::exception& e) {
+            xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
+                std::string("submitELF: get_elf_flow failed; using non-full-ELF path: ") + e.what());
+        }
+
         xrt::elf profileElf;
         try {
             profileElf = xrt::elf(getElfFileName());
@@ -158,22 +213,17 @@ namespace xdp::aie {
         xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", "Elf Object Created");
         xrt::kernel kernel;
 
-        if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
-            // Full ELF flow: register profiling ELF with hw_context,
-            // then create kernel by name from the ELF map
+        if (full_elf_flow) {
+            // Full ELF flow: add_config() registers this ELF's kernels on the context,
+            // then xrt::ext::kernel(hwContext, name) resolves them (see xrt_kernel.cpp).
             try {
                 hwContext.add_config(profileElf);
-                auto elfKernels = profileElf.get_kernels();
-                if (elfKernels.empty()) {
-                    xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-                        "No kernels found in " + getElfFileName());
-                    return false;
-                }
-                auto kernelName = elfKernels[0].get_name();
+                const std::string kernelName = "XDP_KERNEL:{" + m_transactionName + "}";
                 kernel = xrt::ext::kernel{hwContext, kernelName};
-            } catch (...) {
+            }
+            catch (const std::exception& e) {
                 xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-                    "Failed to register " + getElfFileName() + " with HW Context.");
+                    std::string("Failed to register ") + getElfFileName() + " with HW Context: " + e.what());
                 return false;
             }
         } else {
@@ -206,7 +256,8 @@ namespace xdp::aie {
     {
         xrt::kernel kernel;
         if (xrt_core::hw_context_int::get_elf_flow(hwContext))
-            kernel = xrt::ext::kernel(hwContext, "XDP_KERNEL");
+            kernel = xrt::ext::kernel(hwContext,
+                std::string("XDP_KERNEL:{") + m_transactionName + "}");
         else
             kernel = xrt::kernel(hwContext, "XDP_KERNEL");
         return kernel.group_id(id);

@@ -1586,8 +1586,25 @@ namespace xdp {
   updateDeviceFromCoreDevice(uint64_t deviceId,
                              std::shared_ptr<xrt_core::device> device,
                              bool readAIEMetadata,
-                             std::unique_ptr<xdp::Device> xdpDevice)
+                             std::unique_ptr<xdp::Device> xdpDevice,
+                             void* hwCtxImpl)
   {
+    if (hwCtxImpl != nullptr) {
+      try {
+        xrt::hw_context hwContext =
+            xrt_core::hw_context_int::create_hw_context_from_implementation(hwCtxImpl);
+        if (xrt_core::hw_context_int::get_elf_flow(hwContext)) {
+          updateDeviceFromCoreDeviceElf(deviceId, device, readAIEMetadata);
+          return;
+        }
+      }
+      catch (const std::exception& e) {
+        std::stringstream msg;
+        msg << "Could not query hardware context for ELF flow; using xclbin path: " << e.what();
+        xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", msg.str());
+      }
+    }
+
     xrt::uuid new_xclbin_uuid;
     //TODO:: Getting xclbin_uuid should be unified for both Client and VE2.
     if(isClient()) {
@@ -1630,11 +1647,17 @@ namespace xdp {
   {
     // TODO:: Getting xclbin_uuid should be unified for both Client and VE2.
     if (isClient() || !(hw_context_flow)) {
-      updateDeviceFromCoreDevice(deviceId, device, readAIEMetadata, std::move(xdpDevice));
+      void* elfProbeHwCtx = hw_context_flow ? hwCtxImpl : nullptr;
+      updateDeviceFromCoreDevice(deviceId, device, readAIEMetadata, std::move(xdpDevice), elfProbeHwCtx);
       return;
     } 
 
     xrt::hw_context context = xrt_core::hw_context_int::create_hw_context_from_implementation(hwCtxImpl);
+    if (xrt_core::hw_context_int::get_elf_flow(context)) {
+      updateDeviceFromCoreDeviceElf(deviceId, device, readAIEMetadata);
+      return;
+    }
+
     xrt::uuid new_xclbin_uuid = context.get_xclbin_uuid();
 
     /* If multiple plugins are enabled for the current run, the first plugin has already updated device information
@@ -1671,7 +1694,8 @@ namespace xdp {
   void
   VPStaticDatabase::
   updateDeviceFromCoreDeviceElf(uint64_t deviceId,
-                                std::shared_ptr<xrt_core::device> /*device*/)
+                                std::shared_ptr<xrt_core::device> /*device*/,
+                                bool readAIEMetadata)
   {
     // For ELF Flow, always reset the device for now
     DeviceInfo* devInfo = nullptr ;
@@ -1685,6 +1709,9 @@ namespace xdp {
       // This is a previously used device being reloaded with a new elf
       devInfo = itr->second.get();
     }
+    if (!readAIEMetadata)
+      return;
+
     // Read aie_trace_metadata
     boost::property_tree::ptree aieMetadata;
     std::unique_ptr<aie::BaseFiletypeImpl> metadataReader;

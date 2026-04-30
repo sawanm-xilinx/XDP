@@ -77,8 +77,8 @@ if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
   if (XDP_NPU3_BUILD_CMAKE)
     target_compile_definitions(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE XDP_NPU3_BUILD=1)
   endif()
-  target_include_directories(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE 
-                             ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
+  set(_AIE_PROFILE_PRIVATE_INC ${AIERT_DIR}/include ${AIEBU_SOURCE_DIR}/src/cpp/include)
+  target_include_directories(${AIE_PROFILE_PLUGIN_TARGET} PRIVATE ${_AIE_PROFILE_PRIVATE_INC})
   set_target_properties(${AIE_PROFILE_PLUGIN_TARGET} PROPERTIES VERSION ${XRT_VERSION_STRING} SOVERSION ${XRT_SOVERSION})
 
   install (TARGETS ${AIE_PROFILE_PLUGIN_TARGET}
