@@ -116,7 +116,7 @@ namespace xdp {
     meta_config.column_shift       = 25;
     meta_config.row_shift          = 20;
     meta_config.num_rows           = 6;   // 1 shim + 1 mem + 4 AIE
-    meta_config.num_columns        = 4;
+    meta_config.num_columns        = 3;
     meta_config.shim_row           = 0;
     meta_config.mem_row_start      = 1;
     meta_config.mem_num_rows       = 1;
