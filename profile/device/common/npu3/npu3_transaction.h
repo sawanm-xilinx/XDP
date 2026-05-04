@@ -32,6 +32,10 @@ namespace xdp::aie {
       int getGroupID(int id, xrt::hw_context hwContext);
 
     private:
+      static std::string fullElfKernelHandle(const std::string& instanceId);
+      static std::vector<char> loadXdpKernelFullElfConfig(const std::string& asmFileName,
+                                                        const std::string& instanceId);
+
       std::string m_transactionName;
       std::vector<uint8_t> m_columns;
       std::vector<uint8_t> m_rows;

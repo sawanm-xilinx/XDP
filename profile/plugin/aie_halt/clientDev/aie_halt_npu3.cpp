@@ -13,12 +13,10 @@
 
 #include "core/common/device.h"
 #include "core/common/message.h"
-#include "core/common/api/hw_context_int.h"
 #include "core/common/api/xclbin_int.h"
 #include "core/include/xclbin.h"
 #include "core/include/xrt/experimental/xrt_elf.h"
 #include "core/include/xrt/experimental/xrt_ext.h"
-#include "core/include/xrt/experimental/xrt_module.h"
 #include "core/include/xrt/xrt_kernel.h"
 
 #include <boost/property_tree/ptree.hpp>
@@ -46,7 +44,7 @@ namespace xdp {
 #pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
-  void AIEHaltNPU3Impl::updateDevice(void* /*hwCtxImpl*/)
+  void AIEHaltNPU3Impl::updateDevice(void* hwCtxImpl)
   {
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
               "In AIEHaltNPU3Impl::updateDevice");
@@ -68,10 +66,10 @@ namespace xdp {
         return;
       }
 
-      xrt::module mod{haltElf};
       xrt::kernel krnl;
       try {
-        krnl = xrt::ext::kernel{mHwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
+        mHwContext.add_config(haltElf);
+        krnl = xrt::ext::kernel{mHwContext, "XDP_KERNEL:{IPUV1CNN}"};
       } catch (...) {
         xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
                   "XDP_KERNEL not found in HW Context. Cannot configure AIE to halt.");
@@ -146,11 +144,16 @@ namespace xdp {
     }
 
     // Get partition columns
-    //boost::property_tree::ptree aiePartitionPt = xdp::aie::getAIEPartitionInfo(metadata->getHandle());
-    // Currently, assuming only one Hw Context is alive at a time
-    //uint8_t startCol = static_cast<uint8_t>(aiePartitionPt.front().second.get<uint64_t>("start_col"));
     uint8_t startCol = 0;
-    uint8_t numCols = meta_config.num_columns;
+    //uint8_t numCols = meta_config.num_columns;
+    uint8_t numCols = 0;
+    boost::property_tree::ptree aiePartitionPt = xdp::aie::getAIEPartitionInfo(hwCtxImpl);
+    for (const auto& e : aiePartitionPt) {
+      startCol = e.second.get<uint64_t>("start_col");
+      numCols  = e.second.get<uint64_t>("num_cols");
+      // Currently, assuming only one Hw Context is alive at a time
+      break;
+    }
     uint8_t startRow = meta_config.aie_tile_row_start;
     uint8_t numRows = meta_config.aie_tile_num_rows;
 
