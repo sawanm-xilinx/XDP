@@ -15,9 +15,6 @@
 #include "core/common/message.h"
 #include "core/common/api/xclbin_int.h"
 #include "core/include/xclbin.h"
-#include "core/include/xrt/experimental/xrt_elf.h"
-#include "core/include/xrt/experimental/xrt_ext.h"
-#include "core/include/xrt/xrt_kernel.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -46,55 +43,11 @@ namespace xdp {
 #endif
   void AIEHaltNPU3Impl::updateDevice(void* hwCtxImpl)
   {
-    xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
-              "In AIEHaltNPU3Impl::updateDevice");
-
-    // Two ways to run:
-    //   1. Use pre-created elf
-    //   2. Have plugin create elf and tranx 
-    std::string inputCtrlCode = xrt_core::config::get_aie_halt_settings_control_code();
-    if (!inputCtrlCode.empty()) {
-      xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
-          "Using AIE Halt control code " + inputCtrlCode);
-
-      xrt::elf haltElf;
-      try {
-        haltElf = xrt::elf(inputCtrlCode);
-      } catch (...) {
-        std::string msg = "Failed to load " + inputCtrlCode + ". Cannot configure AIE to halt.";
-        xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", msg);
-        return;
-      }
-
-      xrt::kernel krnl;
-      try {
-        mHwContext.add_config(haltElf);
-        krnl = xrt::ext::kernel{mHwContext, "XDP_KERNEL:{IPUV1CNN}"};
-      } catch (...) {
-        xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
-                  "XDP_KERNEL not found in HW Context. Cannot configure AIE to halt.");
-        return;
-      }
-
-      xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
-                "In AIEHaltNPU3Impl New Kernel Object for XDP_KERNEL created for running control code Elf");      
-
-      xrt::run rn{krnl};
-      rn.start();
-      xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
-                "In AIEHaltNPU3Impl run start, going to wait");  
-
-      rn.wait2();
-      xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", 
-                "Successfully scheduled AIE Halt.");
-      return;
-    }
-    
     //
     // Create and submit control code to halt all cores
     //
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
-        "Creating AIE Halt control code");
+                            "In AIEHaltNPU3Impl::updateDevice");
 
 #if 0
     const xdp::aie::BaseFiletypeImpl *metadataReader = 
