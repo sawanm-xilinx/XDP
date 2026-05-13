@@ -433,13 +433,9 @@ namespace xdp {
     }
   }
 
-  uint64_t AIEStatusPlugin::getDeviceIDFromHandle(void* handle, bool hw_context_flow)
+  uint64_t AIEStatusPlugin::getDeviceIDFromHandle(void* handle)
   {
-    if (hw_context_flow)
-      return db->addDevice("ve2_device");
-    else
-      // only xcl device handle
-      return db->addDevice(util::getDebugIpLayoutPath(handle)); // Get the unique device Id
+    return (db->getStaticInfo()).getDeviceContextUniqueId(handle);
   }
 
   /****************************************************************************
@@ -455,22 +451,23 @@ namespace xdp {
     if (!handle)
       return;
 
+    if (!((db->getStaticInfo()).continueXDPConfig(hw_context_flow))) 
+      return;
+
     auto mXrtCoreDevice = util::convertToCoreDevice(handle, hw_context_flow);
-    auto deviceID = getDeviceIDFromHandle(handle, hw_context_flow);
+    auto deviceID = getDeviceIDFromHandle(handle);
 
     // Update the static database with information from xclbin
     {
-      #ifdef XDP_VE2_BUILD
+      if ((db->getStaticInfo()).getAppStyle() == xdp::AppStyle::REGISTER_XCLBIN_STYLE)
         // TODO: should we use updateDeviceFromCoreDeviceHwCtxFlow or updateDeviceFromCoreDevice
-        (db->getStaticInfo()).updateDeviceFromCoreDevice(deviceID, mXrtCoreDevice, true, nullptr,
-                                                         hw_context_flow ? handle : nullptr);
-      #else
+        (db->getStaticInfo()).updateDeviceFromCoreDeviceHwCtxFlow(deviceID, mXrtCoreDevice, handle, hw_context_flow);
+      else
         (db->getStaticInfo()).updateDeviceFromHandle(deviceID, nullptr, handle);
-      #endif
     }
 
     // Grab AIE metadata
-    metadataReader = (db->getStaticInfo()).getAIEmetadataReader();
+    metadataReader = (db->getStaticInfo()).getAIEmetadataReader(deviceID);
     if (!metadataReader)
       return;
     auto hwGen =  metadataReader->getHardwareGeneration();
@@ -479,11 +476,7 @@ namespace xdp {
     getTilesForStatus(handle);
 
     // Open the writer for this device
-    #ifdef XDP_VE2_BUILD
-      std::string devicename = util::getDeviceName(handle,true);
-    #else
-      std::string devicename = util::getDeviceName(handle);
-    #endif
+    std::string devicename = util::getDeviceName(handle, hw_context_flow);
 
     std::string currentTime = "0000_00_00_0000";
     auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());

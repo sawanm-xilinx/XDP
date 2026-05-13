@@ -4,7 +4,6 @@
 #define XDP_PLUGIN_SOURCE 
 
 #include "xdp/profile/plugin/aie_profile/ve2/aie_profile.h"
-#include "xdp/profile/plugin/aie_profile/ve2/aie_profile_ct_writer.h"
 #include "xdp/profile/plugin/aie_profile/aie_profile_defs.h"
 #include "xdp/profile/plugin/aie_profile/aie_profile_metadata.h"
 #include "xdp/profile/plugin/aie_profile/util/aie_profile_util.h"
@@ -13,11 +12,11 @@
 #include "xdp/profile/plugin/aie_base/aie_nop_util.h"
 
 #include "xdp/profile/database/database.h"
+#include "xdp/profile/device/utility.h"
 #include "xdp/profile/database/static_info/aie_util.h"
 #include "xdp/profile/database/static_info/aie_constructs.h"
 #include "xdp/profile/database/static_info/pl_constructs.h"
 
-#include <boost/algorithm/string.hpp>
 #include <cmath>
 #include <memory>
 #include <cstring>
@@ -26,9 +25,8 @@
 #include "core/common/message.h"
 #include "core/common/time.h"
 #include "core/common/config_reader.h"
-#include "core/include/xrt/xrt_kernel.h"
-
-#include <filesystem>
+#include <iterator>
+#include <sstream>
 #include "core/common/shim/hwctx_handle.h"
 #include "core/common/api/hw_context_int.h"
 #include "shim_ve2/xdna_hwctx.h"
@@ -78,15 +76,6 @@ namespace xdp {
     shimStartEvents = aie::profile::getInterfaceTileEventSets(hwGen);
     shimEndEvents = shimStartEvents;
     shimEndEvents[METRIC_BYTE_COUNT] = {XAIE_EVENT_PORT_RUNNING_0_PL, XAIE_EVENT_PERF_CNT_0_PL};
-    
-    if (aie::isDebugVerbosity()) {
-      auto it = shimStartEvents.find("ddr_bandwidth");
-      if (it != shimStartEvents.end()) {
-        std::stringstream msg;
-        msg << "ddr_bandwidth event set has " << it->second.size() << " events";
-        xrt_core::message::send(severity_level::debug, "XRT", msg.str());
-      }
-    }
 
     memTileStartEvents = aie::profile::getMemoryTileEventSets(hwGen);
     memTileEndEvents = memTileStartEvents;
@@ -111,25 +100,6 @@ namespace xdp {
       if(!checkAieDevice(deviceID, metadata->getHandle()))
               return;
 
-      // Check if dtrace_debug is enabled and set control file path BEFORE submitNopElf
-      // This is critical because xrt_module.cpp calls get_dtrace_control_file_path() 
-      // during module creation, and config reader locks keys after first access
-      bool dtraceDebug = xrt_core::config::get_aie_profile_settings_dtrace_debug();
-      if (dtraceDebug) {
-        std::string ctFilePath = (std::filesystem::current_path() / "aie_profile.ct").string();
-        try {
-          xrt_core::config::detail::set("Debug.dtrace_control_file_path", ctFilePath);
-          std::stringstream msg;
-          msg << "AIE Profile: Set dtrace_control_file_path to '" << ctFilePath << "'";
-          xrt_core::message::send(severity_level::info, "XRT", msg.str());
-        }
-        catch (const std::exception& e) {
-          std::stringstream msg;
-          msg << "AIE Profile: Could not set dtrace_control_file_path: " << e.what();
-          xrt_core::message::send(severity_level::warning, "XRT", msg.str());
-        }
-      }
-
       // Submit nop.elf before configuring profile
       if (!aie::submitNopElf(metadata->getHandle())) {
         xrt_core::message::send(severity_level::warning, "XRT",
@@ -138,19 +108,26 @@ namespace xdp {
       }
 
       bool runtimeCounters = setMetricsSettings(deviceID, metadata->getHandle());
-      // Generate CT file for AIE profile counters after metrics settings are configured
-      if (runtimeCounters && dtraceDebug) {
-        AieProfileCTWriter ctWriter(db, metadata, deviceID);
-        ctWriter.generate();
-      }
-  
+
       if (!runtimeCounters) {
-        std::shared_ptr<xrt_core::device> device = xrt_core::get_userpf_device(metadata->getHandle());
+        void* h = metadata->getHandle();
+        std::shared_ptr<xrt_core::device> device = xrt_core::get_userpf_device(h);
+        if (!device)
+          device = xdp::util::convertToCoreDevice(h, true);
+        if (!device) {
+          xrt_core::message::send(severity_level::warning, "XRT",
+              "AIE Profile: could not resolve core device for xclbin profile counters.");
+          (db->getStaticInfo()).setIsAIECounterRead(deviceID, true);
+          return;
+        }
         auto counters = xrt_core::edge::aie::get_profile_counters(device.get());
 
         if (counters.empty()) {
           xrt_core::message::send(severity_level::warning, "XRT", 
-            "AIE Profile Counters were not found for this design. Please specify tile_based_[aie|aie_memory|interface_tile]_metrics under \"AIE_profile_settings\" section in your xrt.ini.");
+            "AIE Profile Counters were not found for this design. Please specify "
+            "graph_based_[aie|aie_memory|memory_tile|interface_tile]_metrics and/or "
+            "tile_based_[aie|aie_memory|memory_tile|interface_tile|microcontroller]_metrics "
+            "under \"AIE_profile_settings\" section in your xrt.ini.");
           (db->getStaticInfo()).setIsAIECounterRead(deviceID,true);
           return;
         }
@@ -214,11 +191,6 @@ namespace xdp {
       uint8_t idToReport = (tile.subtype == io_type::GMIO) ? channel : streamPortId;
       uint8_t isChannel  = (tile.subtype == io_type::GMIO) ? 1 : 0;
       uint8_t isMaster = aie::isInputSet(type, metricSet)  ? 0 : 1;
-      if ((type == module_type::shim) && ((metricSet == "ddr_bandwidth") || (metricSet == "read_bandwidth") || (metricSet == "write_bandwidth"))) {
-        uint8_t idx = (portnum < tile.is_master_vec.size()) ? portnum
-                    : (logicalPortIndex < tile.is_master_vec.size()) ? logicalPortIndex : 0;
-        isMaster = tile.is_master_vec.at(idx);
-      }
 
       return ((isMaster << PAYLOAD_IS_MASTER_SHIFT)
              | (isChannel << PAYLOAD_IS_CHANNEL_SHIFT) | idToReport);
@@ -385,17 +357,6 @@ namespace xdp {
             continue;
         }
 
-        // Skip interface tiles with empty stream_ids for throughput metrics
-        if ((type == module_type::shim) && 
-            ((metricSet == "read_bandwidth") || (metricSet == "write_bandwidth") || (metricSet == "ddr_bandwidth")) &&
-            tile.stream_ids.empty()) {
-          std::stringstream msg;
-          msg << "Skipping " << metricSet << " configuration for tile (" << +col << "," << +row 
-              << ") - stream_ids is empty";
-          xrt_core::message::send(severity_level::warning, "XRT", msg.str());
-          continue;
-        }
-
         auto loc         = XAie_TileLoc(col, row);
         auto& xaieTile   = aieDevice->tile(col, row);
         auto xaieModule  = (mod == XAIE_CORE_MOD) ? xaieTile.core()
@@ -414,20 +375,7 @@ namespace xdp {
 
         int numCounters  = 0;
         auto numFreeCtr  = stats.getNumRsc(loc, mod, xaiefal::XAIE_PERFCOUNT);
-        
-        if (aie::isDebugVerbosity() && ((metricSet == "ddr_bandwidth") || (metricSet == "read_bandwidth") || (metricSet == "write_bandwidth"))) {
-          std::stringstream msg;
-          msg << metricSet << " **** counter reservation: tile (" << +col << "," << +row 
-              << ") startEvents.size()=" << startEvents.size()
-              << " hardware_counters=" << numFreeCtr
-              << " tile.stream_ids.size()=" << tile.stream_ids.size();
-          xrt_core::message::send(severity_level::debug, "XRT", msg.str());
-        }
-        
         numFreeCtr = (startEvents.size() < numFreeCtr) ? startEvents.size() : numFreeCtr;
-        if ((type == module_type::shim) && ((metricSet == "ddr_bandwidth") || (metricSet == "read_bandwidth") || (metricSet == "write_bandwidth"))) {
-          numFreeCtr = tile.stream_ids.size();
-        }
 
         int numFreeCtrSS = numFreeCtr;
         if (aie::profile::profileAPIMetricSet(metricSet)) {
@@ -490,7 +438,7 @@ namespace xdp {
           auto endEvent      = endEvents.at(i);
           auto resetEvent    = XAIE_EVENT_NONE_CORE;
           auto portnum       = xdp::aie::getPortNumberFromEvent(startEvent);
-          // For metric sets with 4 ports (like ddr_bandwidth), use modulo for channel mapping
+          // For metric sets with multiple stream-switch ports, use modulo for channel mapping
           uint8_t channelNum = portnum % 2;
           uint8_t channel    = (channelNum == 0) ? channel0 : channel1;
 
