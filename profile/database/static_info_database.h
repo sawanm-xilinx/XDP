@@ -48,7 +48,8 @@ namespace xdp {
   // Forward declarations of device and xclbin contents
   struct DeviceInfo;
   struct ConfigInfo;
-  struct XclbinInfo;
+  class  XclbinBinData;
+  using  XclbinInfo = XclbinBinData;
   class  IpMetadata;
 
   //Forward declaration of XDP's device structure

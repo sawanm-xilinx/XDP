@@ -28,6 +28,7 @@
 
 #include "xdp/config.h"
 #include "xdp/profile/database/static_info/aie_constructs.h"
+#include "xdp/profile/database/static_info/vp_bin_data.h"
 #include "xdp/profile/database/static_info/xclbin_types.h"
 
 namespace xdp {
@@ -161,18 +162,46 @@ namespace xdp {
       void releaseResources();
   } ;
 
-  // The struct XclbinInfo contains all of the information and configuration
-  //  for a single xclbin.  Since an application may load many xclbins, and
-  //  we need to output summary information on all of the application at
-  //  the end of execution, we need to some configuration data for
-  //  all the xclbins that are encountered.  An xclbin can contain PL-specific
-  //  information and AIE-specific information
-  struct XclbinInfo
+  // The class XclbinBinData contains all of the information and
+  //  configuration for a single xclbin. Since an application may load many
+  //  xclbins, and we need to output summary information on all of the
+  //  application at the end of execution, we need some configuration data
+  //  for all the xclbins that are encountered. An xclbin can contain
+  //  PL-specific information and AIE-specific information.
+  //
+  //  This class is the xclbin-backed implementation of the neutral
+  //  VPBinData interface (see vp_bin_data.h). A future ElfBinData
+  //  implementation will provide AIE-only data parsed from ELF metadata.
+  class XclbinBinData final : public VPBinData
   {
-    // The unique ID for this xclbin.  We use this to see if the same
-    //  xclbin is loaded multiple times in the same application.
+  public:
+    explicit XclbinBinData(XclbinInfoType xclbinType) ;
+    ~XclbinBinData() override = default;
+
+    // VPBinData interface
+    const xrt_core::uuid& getUuid() const override { return uuid; }
+    const std::string&    getName() const override { return name; }
+    XclbinInfoType        getType() const override { return type; }
+    BinDataSource         source()  const override { return BinDataSource::XCLBIN; }
+
+    PLInfo&       getPl()        override { return pl; }
+    const PLInfo& getPl()  const override { return pl; }
+
+    AIEInfo&       getAie()       override { return aie; }
+    const AIEInfo& getAie() const override { return aie; }
+
+    // Setters
+    void setUuid(const xrt_core::uuid& value) { uuid = value; }
+    void setName(const std::string& value)    { name = value; }
+    void setType(XclbinInfoType value)        { type = value; }
+
+    // Fields are kept public during the VPBinData migration so non-profile
+    //  writers and plugins (which still use direct field access) keep
+    //  compiling. Accessor-based code paths (e.g. ConfigInfo internals,
+    //  profile plugin and its writers in Part 2) go through the virtual
+    //  interface above.
     xrt_core::uuid uuid ;
-    std::string name ;
+    std::string    name ;
     XclbinInfoType type {XCLBIN_AIE_PL} ;
 
     // The configuration of the PL portion of the design
@@ -180,10 +209,23 @@ namespace xdp {
 
     // The configuration of the AIE portion of the design (if applicable)
     AIEInfo aie ;
-
-    XclbinInfo(XclbinInfoType xclbinType) ;
-    ~XclbinInfo() = default;
   } ;
+
+  // Compatibility alias kept during the VPBinData migration. Existing code
+  //  using XclbinInfo* / XclbinInfo (e.g. ConfigInfo::currentXclbins, plugin
+  //  call sites) continues to compile. Once API signatures are migrated to
+  //  VPBinData* this alias can be retargeted (or removed entirely).
+  using XclbinInfo = XclbinBinData;
+
+} // end namespace xdp
+
+// ElfBinData is a non-instantiated skeleton sharing the VPBinData interface
+//  with XclbinBinData. Included here (after PLInfo / AIEInfo are defined) so
+//  any translation unit that has xclbin_info.h also sees the ELF-side type
+//  for future polymorphic use. Not constructed anywhere in this pass.
+#include "xdp/profile/database/static_info/elf_bin_data.h"
+
+namespace xdp {
 
   // The config struct stores multiple xclbins
   struct ConfigInfo {

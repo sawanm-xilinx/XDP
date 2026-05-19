@@ -31,7 +31,8 @@
 namespace xdp {
 
   // Forward declarations
-  struct XclbinInfo ;
+  class XclbinBinData ;
+  using XclbinInfo = XclbinBinData ;
   struct Monitor ;
   struct NoCNode ;
   class aie_cfg_tile ;

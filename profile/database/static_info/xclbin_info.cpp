@@ -205,12 +205,19 @@ namespace xdp {
     aieCfgList.clear() ;
   }
 
-  XclbinInfo::XclbinInfo(XclbinInfoType xclbinType) : type(xclbinType)
+  XclbinBinData::XclbinBinData(XclbinInfoType xclbinType) : type(xclbinType)
   {
       if (xclbinType == XclbinInfoType::XCLBIN_PL_ONLY) {
         pl.valid  = true;
         aie.valid = false;
       } else if (xclbinType == XclbinInfoType::XCLBIN_AIE_ONLY) {
+        pl.valid  = false;
+        aie.valid = true;
+      } else if (xclbinType == XclbinInfoType::ELF_AIE_ONLY) {
+        // Forward-compat: ELF-sourced configuration is AIE-only. The
+        // concrete xclbin-backed object is not normally constructed with
+        // this enum value (it is reserved for the future ElfBinData
+        // implementation), but keep behavior symmetric should it occur.
         pl.valid  = false;
         aie.valid = true;
       }
@@ -236,11 +243,11 @@ namespace xdp {
   xrt_core::uuid ConfigInfo::getConfigUuid()
   {
     if (currentXclbins.size()==1)
-      return currentXclbins.back()->uuid;
+      return currentXclbins.back()->getUuid();
 
     std::string mix_uuid_str;
     for (auto xclbin : currentXclbins)
-      mix_uuid_str += xclbin->uuid.to_string();
+      mix_uuid_str += xclbin->getUuid().to_string();
     
     return xrt_core::uuid(mix_uuid_str);
   }
@@ -254,7 +261,7 @@ namespace xdp {
   {
     for (auto xclbin : currentXclbins)
     {
-      if (xclbin->uuid == uuid)
+      if (xclbin->getUuid() == uuid)
         return true;
     }
     
@@ -265,7 +272,7 @@ namespace xdp {
   {
     for (auto xclbin : currentXclbins)
     {
-      if (xclbin->type == xclbinQueryType)
+      if (xclbin->getType() == xclbinQueryType)
         return true;
     }
 
@@ -276,7 +283,7 @@ namespace xdp {
   {
     for (auto xclbin : currentXclbins)
     {
-      if (xclbin->pl.valid)
+      if (xclbin->getPl().valid)
         return xclbin;
     }
     return nullptr;
@@ -286,7 +293,7 @@ namespace xdp {
   {
     for (auto xclbin : currentXclbins)
     {
-      if (xclbin->aie.valid)
+      if (xclbin->getAie().valid)
         return xclbin;
     }
     return nullptr;
@@ -296,9 +303,9 @@ namespace xdp {
   {
     std::string name = "";
     if (!currentXclbins.empty()) {
-      name += currentXclbins.front()->name;
+      name += currentXclbins.front()->getName();
       for (size_t i=1; i<currentXclbins.size(); i++)
-        name += ", " + currentXclbins[i]->name;
+        name += ", " + currentXclbins[i]->getName();
     }
     return name ;
   }
@@ -332,8 +339,8 @@ namespace xdp {
     bool ConfigInfo::hasFloatingAIMWithTrace(XclbinInfo* xclbin)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid)
-          return bin->pl.hasFloatingAIMWithTrace ;
+        if (bin == xclbin && bin->getPl().valid)
+          return bin->getPl().hasFloatingAIMWithTrace ;
       }
 
       return false ;
@@ -342,8 +349,8 @@ namespace xdp {
     bool ConfigInfo::hasFloatingASMWithTrace(XclbinInfo* xclbin)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid)
-          return bin->pl.hasFloatingASMWithTrace ;
+        if (bin == xclbin && bin->getPl().valid)
+          return bin->getPl().hasFloatingASMWithTrace ;
       }
       
       return false ;
@@ -352,8 +359,8 @@ namespace xdp {
     uint64_t ConfigInfo::getNumAM(XclbinInfo* xclbin)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid)
-          return bin->pl.ams.size() ;
+        if (bin == xclbin && bin->getPl().valid)
+          return bin->getPl().ams.size() ;
       }
 
       return 0;
@@ -363,8 +370,8 @@ namespace xdp {
     {
       uint64_t num = 0;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto am : bin->pl.ams) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto am : bin->getPl().ams) {
             if (am->traceEnabled)
               ++num ;
           }
@@ -377,7 +384,7 @@ namespace xdp {
     {
       for (auto bin : currentXclbins) {
         if (bin == xclbin)
-          return bin->pl.aims.size() ;
+          return bin->getPl().aims.size() ;
       }
 
       return 0 ;
@@ -387,8 +394,8 @@ namespace xdp {
     {
       uint64_t num = 0;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto aim : bin->pl.aims) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto aim : bin->getPl().aims) {
             if (!aim->isShellMonitor())
               ++num ;
           }
@@ -401,8 +408,8 @@ namespace xdp {
     {
       uint64_t num = 0;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto aim : bin->pl.aims) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto aim : bin->getPl().aims) {
             if (aim->traceEnabled && !aim->isShellMonitor())
               ++num ;
           }
@@ -416,7 +423,7 @@ namespace xdp {
     {
       for (auto bin : currentXclbins) {
         if (bin == xclbin)
-          return bin->pl.asms.size() ;
+          return bin->getPl().asms.size() ;
       }
       return 0 ;
     }
@@ -425,8 +432,8 @@ namespace xdp {
     {
       uint64_t num = 0;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto mon : bin->pl.asms) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto mon : bin->getPl().asms) {
             if (!mon->isShellMonitor())
               ++num;
           }
@@ -439,8 +446,8 @@ namespace xdp {
     {
       uint64_t num = 0;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto mon : bin->pl.asms) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto mon : bin->getPl().asms) {
             if (mon->traceEnabled && !mon->isShellMonitor())
               ++num;
           }
@@ -453,7 +460,7 @@ namespace xdp {
     {
       for (auto bin : currentXclbins) {
         if (bin == xclbin)
-          return bin->aie.nocList.size() ;
+          return bin->getAie().nocList.size() ;
       }
       return 0 ;
     }
@@ -461,8 +468,8 @@ namespace xdp {
     Monitor* ConfigInfo::getAMonitor(XclbinInfo* xclbin, uint64_t slotId)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto am : bin->pl.ams) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto am : bin->getPl().ams) {
             if (am->slotIndex == slotId)
               return am ;
           }
@@ -474,8 +481,8 @@ namespace xdp {
     Monitor* ConfigInfo::getAIMonitor(XclbinInfo* xclbin, uint64_t slotId)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto aim : bin->pl.aims) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto aim : bin->getPl().aims) {
             if (aim->slotIndex == slotId)
               return aim ;
           }
@@ -487,8 +494,8 @@ namespace xdp {
     Monitor* ConfigInfo::getASMonitor(XclbinInfo* xclbin, uint64_t slotId)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto streamMonitor : bin->pl.asms) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto streamMonitor : bin->getPl().asms) {
             if (streamMonitor->slotIndex == slotId)
               return streamMonitor ;
           }
@@ -500,10 +507,10 @@ namespace xdp {
     NoCNode* ConfigInfo::getNOC(XclbinInfo* xclbin, uint64_t idx)
     {
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->aie.valid) {
-          if (bin->aie.nocList.size() <= idx)
+        if (bin == xclbin && bin->getAie().valid) {
+          if (bin->getAie().nocList.size() <= idx)
             return nullptr;
-          return bin->aie.nocList[idx] ;
+          return bin->getAie().nocList[idx] ;
         }
       }
       return nullptr ;
@@ -513,7 +520,7 @@ namespace xdp {
     {
       for (auto bin : currentXclbins) {
         if (bin == xclbin)
-          return &(bin->pl.aims) ;
+          return &(bin->getPl().aims) ;
       }
       return nullptr ;
     }
@@ -522,7 +529,7 @@ namespace xdp {
     {
       for (auto bin : currentXclbins) {
         if (bin == xclbin)
-          return &(bin->pl.asms) ;
+          return &(bin->getPl().asms) ;
       }
       return nullptr ;
     }
@@ -531,8 +538,8 @@ namespace xdp {
     {
       std::vector<Monitor*> constructed ;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto aim : bin->pl.aims) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto aim : bin->getPl().aims) {
             if (aim->traceEnabled && !aim->isShellMonitor())
               constructed.push_back(aim) ;
           }
@@ -545,8 +552,8 @@ namespace xdp {
     {
       std::vector<Monitor*> constructed ;
       for (auto bin : currentXclbins) {
-        if (bin == xclbin && bin->pl.valid) {
-          for (auto mon : bin->pl.asms) {
+        if (bin == xclbin && bin->getPl().valid) {
+          for (auto mon : bin->getPl().asms) {
             if (mon->traceEnabled && !mon->isShellMonitor())
               constructed.push_back(mon) ;
           }
@@ -560,11 +567,11 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
           xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT", 
                                   "Added GMIO trace of ID "+ std::to_string(id) + ".");
-          xclbin->aie.gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId, t)) ;
+          xclbin->getAie().gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId, t)) ;
           return ;
         }
       }
@@ -578,11 +585,11 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieList.push_back(new AIECounter(i, col, r, num, start, end,
-                                                       reset, load, freq, mod,
-                                                       aieName,streamId)) ;
+          xclbin->getAie().aieList.push_back(new AIECounter(i, col, r, num, start, end,
+                                                            reset, load, freq, mod,
+                                                            aieName,streamId)) ;
           return ;
         }
       }
@@ -595,7 +602,7 @@ namespace xdp {
       XclbinInfo* xclbin = nullptr ;
       for (auto bin : currentXclbins)
       {
-        if (bin->aie.valid)
+        if (bin->getAie().valid)
         {
           xclbin = bin;
           break ;
@@ -608,16 +615,16 @@ namespace xdp {
       switch (moduleType)
       {
         case module_type::core:
-          xclbin->aie.aieCoreCountersMap[numCounters] = numTiles ;
+          xclbin->getAie().aieCoreCountersMap[numCounters] = numTiles ;
           break ;
         case module_type::dma:
-          xclbin->aie.aieMemoryCountersMap[numCounters] = numTiles ;
+          xclbin->getAie().aieMemoryCountersMap[numCounters] = numTiles ;
           break ;
         case module_type::shim:
-          xclbin->aie.aieShimCountersMap[numCounters] = numTiles ;
+          xclbin->getAie().aieShimCountersMap[numCounters] = numTiles ;
           break ;
         default:
-          xclbin->aie.aieMemTileCountersMap[numCounters] = numTiles ;
+          xclbin->getAie().aieMemTileCountersMap[numCounters] = numTiles ;
           break ;
       }
     }
@@ -627,9 +634,9 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieCoreEventsMap[numEvents] = numTiles ;
+          xclbin->getAie().aieCoreEventsMap[numEvents] = numTiles ;
           break ;
         }
       }
@@ -640,9 +647,9 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieMemoryEventsMap[numEvents] = numTiles ;
+          xclbin->getAie().aieMemoryEventsMap[numEvents] = numTiles ;
           break ;
         }
       }
@@ -653,9 +660,9 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieShimEventsMap[numEvents] = numTiles ;
+          xclbin->getAie().aieShimEventsMap[numEvents] = numTiles ;
           break ;
         }
       }
@@ -666,9 +673,9 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieMemTileEventsMap[numEvents] = numTiles ;
+          xclbin->getAie().aieMemTileEventsMap[numEvents] = numTiles ;
           break ;
         }
       }
@@ -679,9 +686,9 @@ namespace xdp {
     {
       for (auto xclbin : currentXclbins)
       {
-        if (xclbin->aie.valid)
+        if (xclbin->getAie().valid)
         {
-          xclbin->aie.aieCfgList.push_back(std::move(tile)) ;
+          xclbin->getAie().aieCfgList.push_back(std::move(tile)) ;
           break ;
         }
       }
@@ -697,17 +704,17 @@ namespace xdp {
 
       for (auto xclbin : currentXclbins) {
         // Clean up AIE xclbin
-        if (xclbin->aie.valid) {
+        if (xclbin->getAie().valid) {
           
-          for (auto i : xclbin->aie.aieList)
+          for (auto i : xclbin->getAie().aieList)
             delete i ;
-          xclbin->aie.aieList.clear() ;
+          xclbin->getAie().aieList.clear() ;
           
-          for (auto i : xclbin->aie.gmioList)
+          for (auto i : xclbin->getAie().gmioList)
             delete i ;
-          xclbin->aie.gmioList.clear() ;
+          xclbin->getAie().gmioList.clear() ;
           
-          xclbin->aie.valid = false;
+          xclbin->getAie().valid = false;
         }
       }
     }
@@ -715,7 +722,7 @@ namespace xdp {
     bool ConfigInfo::hasAIMNamed(const std::string& name)
     {
       for (auto xclbin : currentXclbins) {
-        for (auto aim : xclbin->pl.aims) {
+        for (auto aim : xclbin->getPl().aims) {
           if (aim->name.find(name) != std::string::npos)
             return true ;
         }
