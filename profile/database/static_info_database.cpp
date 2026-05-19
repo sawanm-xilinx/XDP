@@ -291,7 +291,7 @@ namespace xdp {
         XclbinInfo* xclbin = config->getPlXclbin();
         if (!xclbin)
           continue;
-        for (const auto& cu : xclbin->pl.cus) {
+        for (const auto& cu : xclbin->getPl().cus) {
           if (cu.second->getStallEnabled())
             return true ;
         }
@@ -335,13 +335,13 @@ namespace xdp {
       XclbinInfo* xclbin = config->getPlXclbin();
       if (!xclbin)
         return 300.0 ;
-      return xclbin->pl.clockRatePLMHz ;
+      return xclbin->getPl().clockRatePLMHz ;
     }
     else {
       XclbinInfo* xclbin = config->getAieXclbin();
       if (!xclbin)
         return 1000.0 ;
-      return xclbin->aie.clockRateAIEMHz ;
+      return xclbin->getAie().clockRateAIEMHz ;
     }
   }
 
@@ -364,7 +364,7 @@ namespace xdp {
 
     //We will consider the clock rate of the Compute Unit with the highest Clock Frequency
     double plClockFreq = 0;
-      for (const auto& cu : xclbin->pl.cus) {
+      for (const auto& cu : xclbin->getPl().cus) {
         plClockFreq = std::max(plClockFreq, cu.second->getClockFrequency());
       }
     return plClockFreq>0 ? plClockFreq : 300.0;
@@ -537,7 +537,7 @@ namespace xdp {
     if (!xclbin)
       return;
 
-    xclbin->pl.hostMaxReadBW = bw ;
+    xclbin->getPl().hostMaxReadBW = bw ;
   }
 
   double VPStaticDatabase::getHostMaxReadBW(uint64_t deviceId)
@@ -555,7 +555,7 @@ namespace xdp {
     if (!xclbin)
       return 0.0;
 
-    return xclbin->pl.hostMaxReadBW ;
+    return xclbin->getPl().hostMaxReadBW ;
   }
 
   void VPStaticDatabase::setHostMaxWriteBW(uint64_t deviceId, double bw)
@@ -573,7 +573,7 @@ namespace xdp {
     if (!xclbin)
       return ;
 
-    xclbin->pl.hostMaxWriteBW = bw ;
+    xclbin->getPl().hostMaxWriteBW = bw ;
   }
 
   double VPStaticDatabase::getHostMaxWriteBW(uint64_t deviceId)
@@ -591,7 +591,7 @@ namespace xdp {
     if (!xclbin)
       return 0.0;
 
-    return xclbin->pl.hostMaxWriteBW ;
+    return xclbin->getPl().hostMaxWriteBW ;
   }
 
   void VPStaticDatabase::setKernelMaxReadBW(uint64_t deviceId, double bw)
@@ -609,7 +609,7 @@ namespace xdp {
     if (!xclbin)
       return;
 
-    xclbin->pl.kernelMaxReadBW = bw ;
+    xclbin->getPl().kernelMaxReadBW = bw ;
   }
 
   double VPStaticDatabase::getKernelMaxReadBW(uint64_t deviceId)
@@ -627,7 +627,7 @@ namespace xdp {
     if (!xclbin)
       return 0.0;
 
-    return xclbin->pl.kernelMaxReadBW ;
+    return xclbin->getPl().kernelMaxReadBW ;
   }
 
   void VPStaticDatabase::setKernelMaxWriteBW(uint64_t deviceId, double bw)
@@ -645,7 +645,7 @@ namespace xdp {
     if (!xclbin)
       return;
 
-    xclbin->pl.kernelMaxWriteBW = bw ;
+    xclbin->getPl().kernelMaxWriteBW = bw ;
   }
 
   double VPStaticDatabase::getKernelMaxWriteBW(uint64_t deviceId)
@@ -663,7 +663,7 @@ namespace xdp {
     if (!xclbin)
       return 0.0;
 
-    return xclbin->pl.kernelMaxWriteBW ;
+    return xclbin->getPl().kernelMaxWriteBW ;
   }
 
   std::string VPStaticDatabase::getXclbinName(uint64_t deviceId)
@@ -707,7 +707,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return xclbin->pl.cus[cuId] ;
+    return xclbin->getPl().cus[cuId] ;
   }
 
   Memory* VPStaticDatabase::getMemory(uint64_t deviceId, int32_t memId)
@@ -725,10 +725,10 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    if (xclbin->pl.memoryInfo.find(memId) == xclbin->pl.memoryInfo.end())
+    if (xclbin->getPl().memoryInfo.find(memId) == xclbin->getPl().memoryInfo.end())
       return nullptr ;
 
-    return xclbin->pl.memoryInfo[memId] ;
+    return xclbin->getPl().memoryInfo[memId] ;
   }
 
   void VPStaticDatabase::getDataflowConfiguration(uint64_t deviceId,
@@ -751,10 +751,10 @@ namespace xdp {
     // User space AM in sorted order of their slotIds.  Matches with
     //  sorted list of AM in xdp::DeviceIntf
     size_t count = 0 ;
-    for (auto mon : xclbin->pl.ams) {
+    for (auto mon : xclbin->getPl().ams) {
       if (count >= size)
         return ;
-      auto cu = xclbin->pl.cus[mon->cuIndex] ;
+      auto cu = xclbin->getPl().cus[mon->cuIndex] ;
       config[count] = cu->getDataflowEnabled() ;
       ++count ;
     }
@@ -782,10 +782,10 @@ namespace xdp {
       return;
 
     size_t count = 0 ;
-    for (auto mon : xclbin->pl.ams) {
+    for (auto mon : xclbin->getPl().ams) {
       if (count >= size)
         return ;
-      auto cu = xclbin->pl.cus[mon->cuIndex] ;
+      auto cu = xclbin->getPl().cus[mon->cuIndex] ;
       config[count] = cu->getHasFA() ;
       ++count ;
     }
@@ -823,7 +823,7 @@ namespace xdp {
       XclbinInfo* xclbin = config->getAieXclbin();
       if (!xclbin)
         continue ;
-      if (xclbin->aie.isAIEcounterRead)
+      if (xclbin->getAie().isAIEcounterRead)
         return true ;
     }
     return false ;
@@ -843,7 +843,7 @@ namespace xdp {
     if (!xclbin)
       return ;
 
-    xclbin->aie.isAIEcounterRead = val ;
+    xclbin->getAie().isAIEcounterRead = val ;
   }
 
   void VPStaticDatabase::setIsGMIORead(uint64_t deviceId, bool val)
@@ -860,7 +860,7 @@ namespace xdp {
     if (!xclbin)
       return ;
 
-    xclbin->aie.isGMIORead = val ;
+    xclbin->getAie().isGMIORead = val ;
   }
 
   bool VPStaticDatabase::isGMIORead(uint64_t deviceId)
@@ -878,7 +878,7 @@ namespace xdp {
     if (!xclbin)
       return false;
 
-    return xclbin->aie.isGMIORead ;
+    return xclbin->getAie().isGMIORead ;
   }
 
   uint64_t VPStaticDatabase::getNumAIECounter(uint64_t deviceId)
@@ -896,7 +896,7 @@ namespace xdp {
     if (!xclbin)
       return 0;
 
-    return xclbin->aie.aieList.size() ;
+    return xclbin->getAie().aieList.size() ;
   }
 
   uint64_t VPStaticDatabase::getNumTraceGMIO(uint64_t deviceId)
@@ -914,7 +914,7 @@ namespace xdp {
     if (!xclbin)
       return 0;
 
-    return xclbin->aie.gmioList.size() ;
+    return xclbin->getAie().gmioList.size() ;
   }
 
   AIECounter* VPStaticDatabase::getAIECounter(uint64_t deviceId, uint64_t idx)
@@ -932,8 +932,8 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    if (xclbin->aie.aieList.size()>0)
-        return xclbin->aie.aieList[idx] ;
+    if (xclbin->getAie().aieList.size()>0)
+        return xclbin->getAie().aieList[idx] ;
     return nullptr;
   }
 
@@ -953,7 +953,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieCoreCountersMap) ;
+    return &(xclbin->getAie().aieCoreCountersMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -972,7 +972,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieMemoryCountersMap) ;
+    return &(xclbin->getAie().aieMemoryCountersMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -991,7 +991,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieShimCountersMap) ;
+    return &(xclbin->getAie().aieShimCountersMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -1010,7 +1010,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieMemTileCountersMap) ;
+    return &(xclbin->getAie().aieMemTileCountersMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -1029,7 +1029,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieCoreEventsMap) ;
+    return &(xclbin->getAie().aieCoreEventsMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -1048,7 +1048,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieMemoryEventsMap) ;
+    return &(xclbin->getAie().aieMemoryEventsMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -1067,7 +1067,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieShimEventsMap) ;
+    return &(xclbin->getAie().aieShimEventsMap) ;
   }
 
   std::map<uint32_t, uint32_t>*
@@ -1086,7 +1086,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieMemTileEventsMap) ;
+    return &(xclbin->getAie().aieMemTileEventsMap) ;
   }
 
   std::vector<std::unique_ptr<aie_cfg_tile>>*
@@ -1105,7 +1105,7 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    return &(xclbin->aie.aieCfgList) ;
+    return &(xclbin->getAie().aieCfgList) ;
   }
 
   TraceGMIO* VPStaticDatabase::getTraceGMIO(uint64_t deviceId, uint64_t idx)
@@ -1123,8 +1123,8 @@ namespace xdp {
     if (!xclbin)
       return nullptr;
 
-    if (idx < xclbin->aie.gmioList.size())
-        return xclbin->aie.gmioList[idx] ;
+    if (idx < xclbin->getAie().gmioList.size())
+        return xclbin->getAie().gmioList[idx] ;
     return nullptr;
   }
 
@@ -1241,11 +1241,11 @@ namespace xdp {
 
     // check for aieXclbin
     if (XclbinInfo* aieXclbin = config->getAieXclbin()) {
-      return aieXclbin->aie.numTracePLIO;
+      return aieXclbin->getAie().numTracePLIO;
     }
     // if aieXclbin is null, check for plXclbin
     if (XclbinInfo* plXclbin = config->getPlXclbin()) {
-      return plXclbin->aie.numTracePLIO;
+      return plXclbin->getAie().numTracePLIO;
     }
     
     return 0;
@@ -1673,7 +1673,12 @@ namespace xdp {
   updateDeviceFromCoreDeviceElf(uint64_t deviceId,
                                 std::shared_ptr<xrt_core::device> /*device*/)
   {
-    // For ELF Flow, always reset the device for now
+    // For ELF Flow, always reset the device for now.
+    //
+    // TODO (VPBinData migration): when full-ELF support is implemented, an
+    // ElfBinData (derived from VPBinData) will be constructed here and
+    // pushed into a CONFIG_ELF_AIE_ONLY ConfigInfo via DeviceInfo, mirroring
+    // how XclbinBinData is built in updateDevice() for the xclbin path.
     DeviceInfo* devInfo = nullptr ;
     auto itr = deviceInfo.find(deviceId);
     if (itr == deviceInfo.end()) {
@@ -1890,7 +1895,7 @@ namespace xdp {
 
     if (systemMetadataSection == nullptr || systemMetadataSz <= 0) {
       // If there is no SYSTEM_METADATA section, use a default name
-      currentXclbin->name = defaultName;
+      currentXclbin->setName(defaultName);
       return;
     }
 
@@ -1902,12 +1907,13 @@ namespace xdp {
       boost::property_tree::ptree pt;
       boost::property_tree::read_json(ss, pt);
 
-      currentXclbin->name = pt.get<std::string>("system_diagram_metadata.xclbin.generated_by.xclbin_name", "");
-      if(!currentXclbin->name.empty()) {
-        currentXclbin->name += ".xclbin";
+      std::string xclbinName = pt.get<std::string>("system_diagram_metadata.xclbin.generated_by.xclbin_name", "");
+      if (!xclbinName.empty()) {
+        xclbinName += ".xclbin";
       }
+      currentXclbin->setName(xclbinName);
     } catch(...) {
-      currentXclbin->name = defaultName;
+      currentXclbin->setName(defaultName);
     }
   }
 
@@ -1992,7 +1998,7 @@ namespace xdp {
             std::transform(portName.begin(), portName.end(), portName.begin(),
                            tolower);
 
-            currentXclbin->pl.addComputeUnitPorts(kernelName,
+            currentXclbin->getPl().addComputeUnitPorts(kernelName,
                                                   portName,
                                                   std::stoi(portWidth));
           }
@@ -2008,17 +2014,17 @@ namespace xdp {
 
             // All of the compute units have the same mapping of arguments
             // to ports.
-            currentXclbin->pl.addArgToPort(kernelName, argName, portName);
+            currentXclbin->getPl().addArgToPort(kernelName, argName, portName);
 
             // Go through all of the compute units for this kernel
-            auto cus = currentXclbin->pl.collectCUs(kernelName);
+            auto cus = currentXclbin->getPl().collectCUs(kernelName);
             for (auto cu : cus) {
 	      std::string cuName = cu->getName();
               if (argumentToMemoryIndex.find({cuName, argName}) == argumentToMemoryIndex.end())
                 continue; // Skip streams not connected to memory
               auto memId = argumentToMemoryIndex[{cuName, argName}];
 
-              currentXclbin->pl.connectArgToMemory(cuName, portName,
+              currentXclbin->getPl().connectArgToMemory(cuName, portName,
                                                    argName, memId);
             }
           }
@@ -2117,7 +2123,7 @@ namespace xdp {
         continue;
       }
       cu = new ComputeUnitInstance(i, cuName);
-      currentXclbin->pl.cus[i] = cu ;
+      currentXclbin->getPl().cus[i] = cu ;
       if((ipData->properties >> IP_CONTROL_SHIFT) & AP_CTRL_CHAIN) {
         cu->setDataflowEnabled(true);
       } else
@@ -2169,7 +2175,7 @@ namespace xdp {
 
     for(int32_t i = 0; i < memTopologySection->m_count; ++i) {
       const struct mem_data* memData = &(memTopologySection->m_mem_data[i]);
-      currentXclbin->pl.memoryInfo[i] =
+      currentXclbin->getPl().memoryInfo[i] =
         new Memory(memData->m_type, i, memData->m_base_address, memData->m_size,
                    reinterpret_cast<const char*>(memData->m_tag),
                    memData->m_used);
@@ -2192,7 +2198,7 @@ namespace xdp {
     for(int32_t i = 0; i < connectivitySection->m_count; ++i) {
       const struct connection* connctn = &(connectivitySection->m_connection[i]);
 
-      if(currentXclbin->pl.cus.find(connctn->m_ip_layout_index) == currentXclbin->pl.cus.end()) {
+      if(currentXclbin->getPl().cus.find(connctn->m_ip_layout_index) == currentXclbin->getPl().cus.end()) {
         const struct ip_data* ipData = &(ipLayoutSection->m_ip_data[connctn->m_ip_layout_index]);
         if(ipData->m_type != IP_KERNEL) {
           // error ?
@@ -2206,7 +2212,7 @@ namespace xdp {
           continue;
         }
         cu = new ComputeUnitInstance(connctn->m_ip_layout_index, cuName);
-        currentXclbin->pl.cus[connctn->m_ip_layout_index] = cu;
+        currentXclbin->getPl().cus[connctn->m_ip_layout_index] = cu;
         if((ipData->properties >> IP_CONTROL_SHIFT) & AP_CTRL_CHAIN) {
           cu->setDataflowEnabled(true);
         } else
@@ -2214,12 +2220,12 @@ namespace xdp {
           cu->setFaEnabled(true);
         }
       } else {
-        cu = currentXclbin->pl.cus[connctn->m_ip_layout_index];
+        cu = currentXclbin->getPl().cus[connctn->m_ip_layout_index];
       }
 
-      if(currentXclbin->pl.memoryInfo.find(connctn->mem_data_index) == currentXclbin->pl.memoryInfo.end()) {
+      if(currentXclbin->getPl().memoryInfo.find(connctn->mem_data_index) == currentXclbin->getPl().memoryInfo.end()) {
         const struct mem_data* memData = &(memTopologySection->m_mem_data[connctn->mem_data_index]);
-        currentXclbin->pl.memoryInfo[connctn->mem_data_index]
+        currentXclbin->getPl().memoryInfo[connctn->mem_data_index]
                  = new Memory(memData->m_type, connctn->mem_data_index,
                               memData->m_base_address, memData->m_size, reinterpret_cast<const char*>(memData->m_tag), memData->m_used);
       }
@@ -2268,7 +2274,7 @@ namespace xdp {
       }
 
       // Find the ComputeUnitInstance
-      for(const auto& cuItr : currentXclbin->pl.cus) {
+      for(const auto& cuItr : currentXclbin->getPl().cus) {
         if(0 != cuItr.second->getKernelName().compare(kernelName)) {
           continue;
         }
@@ -2299,7 +2305,7 @@ namespace xdp {
     }
 
     // Find the compute unit that this AM is attached to.
-    for (const auto& cu : xclbin->pl.cus) {
+    for (const auto& cu : xclbin->getPl().cus) {
       ComputeUnitInstance* cuObj = cu.second ;
       int32_t cuId = cu.second->getIndex() ;
 
@@ -2320,7 +2326,7 @@ namespace xdp {
         mon->clockFrequency = cuObj->getClockFrequency();
 
         // Add the monitor to the list of all monitors in this xclbin
-        xclbin->pl.ams.push_back(mon);
+        xclbin->getPl().ams.push_back(mon);
         // Associate it with this compute unit
         cuObj->setAccelMon(mon->slotIndex) ;
         break ;
@@ -2370,7 +2376,7 @@ namespace xdp {
 
     if (monCuName == "memory_subsystem") {
       if (xclbin)
-        xclbin->pl.hasMemoryAIM = true ;
+        xclbin->getPl().hasMemoryAIM = true ;
     }
 
     std::string memName = "" ;
@@ -2387,14 +2393,14 @@ namespace xdp {
 
     // Find both the compute unit this AIM is attached to (if applicable)
     //  and the memory this AIM is attached to (if applicable).
-    for(const auto& cu : xclbin->pl.cus) {
+    for(const auto& cu : xclbin->getPl().cus) {
       if(0 == monCuName.compare(cu.second->getName())) {
         cuId = cu.second->getIndex();
         cuObj = cu.second;
         break;
       }
     }
-    for(const auto& mem : xclbin->pl.memoryInfo) {
+    for(const auto& mem : xclbin->getPl().memoryInfo) {
       if (0 == memName.compare(mem.second->spTag)) {
         memId = mem.second->index;
         break;
@@ -2414,7 +2420,7 @@ namespace xdp {
     }
 
     // Add the monitor to the list of all AIMs
-    xclbin->pl.aims.push_back(mon) ;
+    xclbin->getPl().aims.push_back(mon) ;
 
     // Attach to a CU if appropriate
     if (cuObj) {
@@ -2423,7 +2429,7 @@ namespace xdp {
     else if(mon->traceEnabled) {
       // If not connected to CU and not a shell monitor, then a floating monitor
       // This floating monitor is enabled for trace too
-      xclbin->pl.hasFloatingAIMWithTrace = true ;
+      xclbin->getPl().hasFloatingAIMWithTrace = true ;
     }
   }
 
@@ -2466,7 +2472,7 @@ namespace xdp {
     ComputeUnitInstance* cuObj = nullptr ;
     int32_t cuId = -1 ;
 
-    for(const auto& cu : xclbin->pl.cus) {
+    for(const auto& cu : xclbin->getPl().cus) {
       if(0 == monCuName.compare(cu.second->getName())) {
         cuId = cu.second->getIndex();
         cuObj = cu.second;
@@ -2492,7 +2498,7 @@ namespace xdp {
 
         monCuName = monCuName.substr(0, pos);
 
-        for(const auto& cu : xclbin->pl.cus) {
+        for(const auto& cu : xclbin->getPl().cus) {
           if(0 == monCuName.compare(cu.second->getName())) {
             cuId = cu.second->getIndex();
             cuObj = cu.second;
@@ -2518,7 +2524,7 @@ namespace xdp {
     }
 
     // Add this monitor to the list of all monitors
-    xclbin->pl.asms.push_back(mon) ;
+    xclbin->getPl().asms.push_back(mon) ;
 
     // If the ASM is an User Space ASM i.e. either connected to a CU or floating but not shell ASM
     if (cuObj) {
@@ -2527,7 +2533,7 @@ namespace xdp {
     else if (mon->traceEnabled) {
       // If not connected to CU and not a shell monitor, then a floating monitor
       // This floating monitor is enabled for trace too
-      xclbin->pl.hasFloatingASMWithTrace = true ;
+      xclbin->getPl().hasFloatingASMWithTrace = true ;
     }
   }
 
@@ -2549,7 +2555,7 @@ namespace xdp {
 
     NoCNode* noc = new NoCNode(index, debugIpData->m_name, readTrafficClass,
                                writeTrafficClass) ;
-    xclbin->aie.nocList.push_back(noc) ;
+    xclbin->getAie().nocList.push_back(noc) ;
     // nocList in xdp::PLDeviceIntf is sorted; Is that required here?
   }
 
@@ -2566,10 +2572,10 @@ namespace xdp {
 
     // TS2MM IP for either AIE PLIO or PL trace offload
     if (debugIpData->m_properties & 0x1) {
-      xclbin->aie.numTracePLIO++ ;
+      xclbin->getAie().numTracePLIO++ ;
     }
     else {
-      xclbin->pl.usesTs2mm = true ;
+      xclbin->getPl().usesTs2mm = true ;
     }
   }
 
@@ -2582,7 +2588,7 @@ namespace xdp {
     XclbinInfo*  xclbin = config->getPlXclbin() ;
     if (!xclbin)
       return;
-    xclbin->pl.usesFifo = true ;
+    xclbin->getPl().usesFifo = true ;
   }
 
   void VPStaticDatabase::addCommandQueueAddress(uint64_t a)
@@ -2683,9 +2689,9 @@ namespace xdp {
       devInfo->cleanCurrentConfig(xclbinType);
     }
 
-    XclbinInfo* currentXclbin = new XclbinInfo(xclbinType) ;
-    currentXclbin->uuid = xrtXclbin.get_uuid();
-    currentXclbin->pl.clockRatePLMHz = findClockRate(xrtXclbin) ;
+    XclbinInfo* currentXclbin = new XclbinBinData(xclbinType) ;
+    currentXclbin->setUuid(xrtXclbin.get_uuid());
+    currentXclbin->getPl().clockRatePLMHz = findClockRate(xrtXclbin) ;
 
     setDeviceNameFromXclbin(deviceId, xrtXclbin);
     if (readAIEdata) {
@@ -2850,9 +2856,9 @@ namespace xdp {
       return;
 
     try {
-      xclbin->aie.clockRateAIEMHz = metadataReader->getAIEClockFreqMHz();
+      xclbin->getAie().clockRateAIEMHz = metadataReader->getAIEClockFreqMHz();
       xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", "read clockRateAIEMHz: "
-                                                        + std::to_string(xclbin->aie.clockRateAIEMHz));
+                                                        + std::to_string(xclbin->getAie().clockRateAIEMHz));
     } catch(...) {
       return;
     }

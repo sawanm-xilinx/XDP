@@ -67,23 +67,23 @@ namespace xdp {
       ConfigInfo* lastCfg = loadedConfigInfos.back().get();
       for (auto &xclbin : lastCfg->currentXclbins)
       {
-        if (xclbin->type == xclbinQueryType || xclbin->type == XCLBIN_AIE_PL) {
+        if (xclbin->getType() == xclbinQueryType || xclbin->getType() == XCLBIN_AIE_PL) {
           // Create a copy of required missing xclbinInfo.
-          requiredXclbinInfo = new XclbinInfo(xclbinQueryType);
+          requiredXclbinInfo = new XclbinBinData(xclbinQueryType);
           if (xclbinQueryType == XCLBIN_AIE_ONLY)
           {
             // Perform deep copy of missing AIE xclbin
-            requiredXclbinInfo->aie = xclbin->aie;
-            requiredXclbinInfo->pl.valid = false ;
+            requiredXclbinInfo->getAie() = xclbin->getAie();
+            requiredXclbinInfo->getPl().valid = false ;
           }
           else
           {
             // Perform deep copy of missing PL xclbin
-            requiredXclbinInfo->pl = xclbin->pl;
-            requiredXclbinInfo->aie.valid = false ;
+            requiredXclbinInfo->getPl() = xclbin->getPl();
+            requiredXclbinInfo->getAie().valid = false ;
           }
-          requiredXclbinInfo->uuid = xclbin->uuid ;
-          requiredXclbinInfo->name = xclbin->name ;
+          requiredXclbinInfo->setUuid(xclbin->getUuid()) ;
+          requiredXclbinInfo->setName(xclbin->getName()) ;
           break;  // Need only one such missing xclbinInfo from last config.
         }
       }
@@ -97,7 +97,7 @@ namespace xdp {
     std::unique_ptr<ConfigInfo> config = std::make_unique<ConfigInfo>();
     config->addXclbin(xclbin);
 
-    auto currentXclbinType = xclbin->type;
+    auto currentXclbinType = xclbin->getType();
 
     // Check if this itself is a complete xclbin (AIE+PL).
     if (currentXclbinType == XCLBIN_AIE_PL)
@@ -112,19 +112,19 @@ namespace xdp {
     XclbinInfo *missingXclbin = nullptr;
     if (currentXclbinType == XCLBIN_AIE_ONLY)
     {
-      xclbin->pl.valid = false ;
+      xclbin->getPl().valid = false ;
       missingXclbin = createXclbinFromLastConfig(XCLBIN_PL_ONLY);
     }
     else
     {
-      xclbin->aie.valid = false ;
+      xclbin->getAie().valid = false ;
       missingXclbin = createXclbinFromLastConfig(XCLBIN_AIE_ONLY);
     }
 
     // If missing part of XclbinInfo is available. 
     if (missingXclbin)
     {
-      config->currentXclbins.back()->aie.numTracePLIO = loadedConfigInfos.size() == 0 ? 0 : loadedConfigInfos.back()->currentXclbins.back()->aie.numTracePLIO;
+      config->currentXclbins.back()->getAie().numTracePLIO = loadedConfigInfos.size() == 0 ? 0 : loadedConfigInfos.back()->currentXclbins.back()->getAie().numTracePLIO;
       config->addXclbin(missingXclbin);
       config->type = CONFIG_AIE_PL_FORMED;
     }
