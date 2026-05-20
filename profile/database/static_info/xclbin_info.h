@@ -211,10 +211,11 @@ namespace xdp {
     AIEInfo aie ;
   } ;
 
-  // Compatibility alias kept during the VPBinData migration. Existing code
-  //  using XclbinInfo* / XclbinInfo (e.g. ConfigInfo::currentXclbins, plugin
-  //  call sites) continues to compile. Once API signatures are migrated to
-  //  VPBinData* this alias can be retargeted (or removed entirely).
+  // Compatibility alias kept during the VPBinData migration. Plugin and
+  //  writer call sites that still spell the xclbin-typed pointer as
+  //  XclbinInfo* continue to compile while they are migrated to VPBinData*
+  //  in Part 2. Once every caller speaks VPBinData* / XclbinBinData* this
+  //  alias can be removed entirely.
   using XclbinInfo = XclbinBinData;
 
 } // end namespace xdp
@@ -227,13 +228,16 @@ namespace xdp {
 
 namespace xdp {
 
-  // The config struct stores multiple xclbins
+  // The config struct stores multiple binaries (xclbin and/or ELF). It is
+  //  a VPBinData aggregator: it does not care whether each entry is an
+  //  XclbinBinData or an ElfBinData, only that it exposes the VPBinData
+  //  interface.
   struct ConfigInfo {
-    // This defines what kind of xclbininfo is loaded on the device.
+    // This defines what kind of binaries are loaded on the device.
     ConfigInfoType type {CONFIG_AIE_PL} ;
 
-    // The currently loaded XCLbinInfo for the device.
-    std::vector<XclbinInfo*> currentXclbins ;
+    // The currently loaded binaries (xclbin and/or ELF) for the device.
+    std::vector<VPBinData*> currentBinaries ;
 
     // The interface with actually communicating with the device.  This
     //  handles the abstractions necessary for communicating in emulation,
@@ -241,47 +245,47 @@ namespace xdp {
     PLDeviceIntf* plDeviceIntf = nullptr ;
 
     ConfigInfo() : type(CONFIG_AIE_PL) {};
-    ConfigInfo(XclbinInfo* xclbin) ;
+    ConfigInfo(VPBinData* binary) ;
     ~ConfigInfo() ;
 
     xrt_core::uuid getConfigUuid() ;
-    void addXclbin(XclbinInfo* newXclbin) ;
+    void addBinary(VPBinData* newBinary) ;
     inline void updateType(ConfigInfoType cfgType) { type=cfgType; }
 
-    bool containsXclbin(xrt_core::uuid& uuid) ;
-    bool containsXclbinType(XclbinInfoType& xclbinQueryType);
+    bool containsBinary(xrt_core::uuid& uuid) ;
+    bool containsBinaryType(XclbinInfoType& binaryQueryType);
 
-    XDP_CORE_EXPORT XclbinInfo* getPlXclbin() ;
-    XDP_CORE_EXPORT XclbinInfo* getAieXclbin() ;
-    XDP_CORE_EXPORT std::string getXclbinNames() ;
+    XDP_CORE_EXPORT VPBinData* getPlBinary() ;
+    XDP_CORE_EXPORT VPBinData* getAieBinary() ;
+    XDP_CORE_EXPORT std::string getBinaryNames() ;
 
     bool isAiePlusPl() ;
     bool isAieOnly();
     bool isPlOnly();
-    bool hasXclbin(XclbinInfo* xclbin);
-   
-    bool hasFloatingAIMWithTrace(XclbinInfo* xclbin);
-    bool hasFloatingASMWithTrace(XclbinInfo* xclbin);
+    bool hasBinary(VPBinData* binary);
 
-    uint64_t getNumAM(XclbinInfo* xclbin) ;
-    uint64_t getNumUserAMWithTrace(XclbinInfo* xclbin) ;
-    uint64_t getNumAIM(XclbinInfo* xclbin) ;
-    uint64_t getNumUserAIM(XclbinInfo* xclbin) ;
-    uint64_t getNumUserAIMWithTrace(XclbinInfo* xclbin) const ;
+    bool hasFloatingAIMWithTrace(VPBinData* binary);
+    bool hasFloatingASMWithTrace(VPBinData* binary);
 
-    uint64_t getNumASM(XclbinInfo* xclbin) const ;
-    uint64_t getNumUserASM(XclbinInfo* xclbin) const ;
-    uint64_t getNumUserASMWithTrace(XclbinInfo* xclbin) ;
+    uint64_t getNumAM(VPBinData* binary) ;
+    uint64_t getNumUserAMWithTrace(VPBinData* binary) ;
+    uint64_t getNumAIM(VPBinData* binary) ;
+    uint64_t getNumUserAIM(VPBinData* binary) ;
+    uint64_t getNumUserAIMWithTrace(VPBinData* binary) const ;
 
-    uint64_t getNumNOC(XclbinInfo* xclbin) ;
-    Monitor* getAMonitor(XclbinInfo* xclbin, uint64_t slotId) ;
-    Monitor* getAIMonitor(XclbinInfo* xclbin, uint64_t slotId) ;
-    Monitor* getASMonitor(XclbinInfo* xclbin, uint64_t slotId) ;
-    NoCNode* getNOC(XclbinInfo* xclbin, uint64_t idx) ;
-    std::vector<Monitor*>* getAIMonitors(XclbinInfo* xclbin) ;
-    std::vector<Monitor*>* getASMonitors(XclbinInfo* xclbin) ;
-    std::vector<Monitor*> getUserAIMsWithTrace(XclbinInfo* xclbin) ;
-    std::vector<Monitor*> getUserASMsWithTrace(XclbinInfo* xclbin) ;
+    uint64_t getNumASM(VPBinData* binary) const ;
+    uint64_t getNumUserASM(VPBinData* binary) const ;
+    uint64_t getNumUserASMWithTrace(VPBinData* binary) ;
+
+    uint64_t getNumNOC(VPBinData* binary) ;
+    Monitor* getAMonitor(VPBinData* binary, uint64_t slotId) ;
+    Monitor* getAIMonitor(VPBinData* binary, uint64_t slotId) ;
+    Monitor* getASMonitor(VPBinData* binary, uint64_t slotId) ;
+    NoCNode* getNOC(VPBinData* binary, uint64_t idx) ;
+    std::vector<Monitor*>* getAIMonitors(VPBinData* binary) ;
+    std::vector<Monitor*>* getASMonitors(VPBinData* binary) ;
+    std::vector<Monitor*> getUserAIMsWithTrace(VPBinData* binary) ;
+    std::vector<Monitor*> getUserASMsWithTrace(VPBinData* binary) ;
 
     void addTraceGMIO(uint32_t id, uint8_t col, uint8_t num,
                                 uint8_t stream, uint8_t len, uint16_t bdId = UINT16_MAX, uint8_t type = 0) ;
@@ -302,7 +306,7 @@ namespace xdp {
     void addAIEMemTileEventResources(uint32_t numEvents,
                                               uint32_t numTiles) ;
     void addAIECfgTile(std::unique_ptr<aie_cfg_tile>&& tile) ;
-    void cleanCurrentXclbinInfos(XclbinInfoType xclbinType) ;
+    void cleanCurrentBinaryInfos(XclbinInfoType binaryType) ;
     bool hasAIMNamed(const std::string& name) ;
   } ;
 
