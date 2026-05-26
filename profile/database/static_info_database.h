@@ -50,7 +50,6 @@ namespace xdp {
   struct ConfigInfo;
   class  VPBinData;
   class  XclbinBinData;
-  using  XclbinInfo = XclbinBinData;
   class  IpMetadata;
 
   //Forward declaration of XDP's device structure
@@ -149,14 +148,14 @@ namespace xdp {
     bool resetDeviceInfo(uint64_t deviceId, xdp::Device* xdpDevice, xrt_core::uuid new_xclbin_uuid);
 
     // Functions that create the overall structure of the Xclbin's PL region
-    void createComputeUnits(XclbinInfo*, const ip_layout*,const char*,size_t);
-    void createMemories(XclbinInfo*, const mem_topology*);
-    void createConnections(XclbinInfo*, const ip_layout*, const mem_topology*,
+    void createComputeUnits(XclbinBinData*, const ip_layout*,const char*,size_t);
+    void createMemories(XclbinBinData*, const mem_topology*);
+    void createConnections(XclbinBinData*, const ip_layout*, const mem_topology*,
                            const connectivity*);
-    void annotateWorkgroupSize(XclbinInfo*, const char*, size_t);
-    void setXclbinName(XclbinInfo*, const char*, size_t);
+    void annotateWorkgroupSize(XclbinBinData*, const char*, size_t);
+    void setXclbinName(XclbinBinData*, const char*, size_t);
     void updateSystemDiagram(const char*, size_t);
-    void addPortInfo(XclbinInfo*, const char*, size_t);
+    void addPortInfo(XclbinBinData*, const char*, size_t);
 
     // Functions that initialize the structure of the debug/profiling IP
     void initializeAM(DeviceInfo* devInfo, const std::string& name,
@@ -174,7 +173,7 @@ namespace xdp {
     void setDeviceNameFromXclbin(uint64_t deviceId, xrt::xclbin xrtXclbin);
     void setAIEGeneration(uint64_t deviceId);
     void setAIEClockRateMHz(uint64_t deviceId);
-    bool initializeStructure(XclbinInfo*, xrt::xclbin);
+    bool initializeStructure(XclbinBinData*, xrt::xclbin);
     bool initializeProfileMonitors(DeviceInfo*, xrt::xclbin);
     double findClockRate(xrt::xclbin);
 
@@ -311,7 +310,6 @@ namespace xdp {
     XDP_CORE_EXPORT double getKernelMaxReadBW(uint64_t deviceId) ;
     XDP_CORE_EXPORT void setKernelMaxWriteBW(uint64_t deviceId, double bw) ;
     XDP_CORE_EXPORT double getKernelMaxWriteBW(uint64_t deviceId) ;
-    XDP_CORE_EXPORT std::string getXclbinName(uint64_t deviceId) ;
     XDP_CORE_EXPORT const std::vector<std::unique_ptr<ConfigInfo>>& getLoadedConfigs(uint64_t deviceId) ;
     XDP_CORE_EXPORT ComputeUnitInstance* getCU(uint64_t deviceId, int32_t cuId) ;
     XDP_CORE_EXPORT Memory* getMemory(uint64_t deviceId, int32_t memId) ;
