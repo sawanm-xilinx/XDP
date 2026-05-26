@@ -580,7 +580,7 @@ namespace xdp {
         {
           xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
                                   "Added GMIO trace of ID "+ std::to_string(id) + ".");
-          bin->getAie().gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId, t)) ;
+          bin->getAie().gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId)) ;
           return ;
         }
       }
