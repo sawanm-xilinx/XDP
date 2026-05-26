@@ -666,20 +666,6 @@ namespace xdp {
     return xclbin->getPl().kernelMaxWriteBW ;
   }
 
-  std::string VPStaticDatabase::getXclbinName(uint64_t deviceId)
-  {
-    std::lock_guard<std::mutex> lock(deviceLock) ;
-
-    if (deviceInfo.find(deviceId) == deviceInfo.end())
-      return "" ;
-
-    ConfigInfo* config = deviceInfo[deviceId]->currentConfig() ;
-    if (!config)
-      return "" ;
-
-    return config->getBinaryNames();
-  }
-
   const std::vector<std::unique_ptr<ConfigInfo>>& VPStaticDatabase::getLoadedConfigs(uint64_t deviceId)
   {
     std::lock_guard<std::mutex> lock(deviceLock) ;
@@ -1911,7 +1897,7 @@ namespace xdp {
     return true;
   }
 
-  void VPStaticDatabase::setXclbinName(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::setXclbinName(XclbinBinData* currentXclbin,
                                        const char* systemMetadataSection,
                                        size_t systemMetadataSz)
   {
@@ -1944,7 +1930,7 @@ namespace xdp {
     }
   }
 
-  void VPStaticDatabase::addPortInfo(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::addPortInfo(XclbinBinData* currentXclbin,
                                      const char* systemMetadataSection,
                                      size_t systemMetadataSz)
   {
@@ -2096,7 +2082,7 @@ namespace xdp {
     
   }
 
-  void VPStaticDatabase::createComputeUnits(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::createComputeUnits(XclbinBinData* currentXclbin,
                                             const ip_layout* ipLayoutSection,
                                             const char* systemMetadataSection,
                                             size_t systemMetadataSz)
@@ -2194,7 +2180,7 @@ namespace xdp {
     }
   }
 
-  void VPStaticDatabase::createMemories(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::createMemories(XclbinBinData* currentXclbin,
                                         const mem_topology* memTopologySection)
   {
     if (currentXclbin == nullptr || memTopologySection == nullptr)
@@ -2209,7 +2195,7 @@ namespace xdp {
     }
   }
 
-  void VPStaticDatabase::createConnections(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::createConnections(XclbinBinData* currentXclbin,
                                            const ip_layout* ipLayoutSection,
                                            const mem_topology* memTopologySection,
                                            const connectivity* connectivitySection)
@@ -2260,7 +2246,7 @@ namespace xdp {
     }
   }
 
-  void VPStaticDatabase::annotateWorkgroupSize(XclbinInfo* currentXclbin,
+  void VPStaticDatabase::annotateWorkgroupSize(XclbinBinData* currentXclbin,
                                                const char* embeddedMetadataSection,
                                                size_t embeddedMetadataSz)
   {
@@ -2707,7 +2693,7 @@ namespace xdp {
       devInfo->cleanCurrentConfig(xclbinType);
     }
 
-    XclbinInfo* currentXclbin = new XclbinBinData(xclbinType) ;
+    XclbinBinData* currentXclbin = new XclbinBinData(xclbinType) ;
     currentXclbin->setUuid(xrtXclbin.get_uuid());
     currentXclbin->getPl().clockRatePLMHz = findClockRate(xrtXclbin) ;
 
@@ -2940,7 +2926,7 @@ namespace xdp {
     return defaultClockSpeed;
   }
 
-  bool VPStaticDatabase::initializeStructure(XclbinInfo* currentXclbin, xrt::xclbin xrtXclbin)
+  bool VPStaticDatabase::initializeStructure(XclbinBinData* currentXclbin, xrt::xclbin xrtXclbin)
   {
     // Step 1 -> Create the compute units based on the IP_LAYOUT and SYSTEM_METADATA section
     const ip_layout* ipLayoutSection =
