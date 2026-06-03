@@ -365,13 +365,22 @@ namespace xdp {
     for (u32 i = 0; i < op_profile_data.size(); i++) {
       XAie_SaveRegister(&aieDevInst, op_profile_data[i], i);
     }
-    if (!tranxHandler->submitTransaction(&aieDevInst, context))
+
+    if(!tranxHandler->completeASM(&aieDevInst))
       return;
+    if(!tranxHandler->generateELF())
+      return;
+    // if (!tranxHandler->submitTransaction(&aieDevInst, context))
+    //   return;
   }
 
   void AieProfile_NPU3Impl::poll(const uint64_t id)
   {
     if (finishedPoll)
+      return;
+
+    auto hwContext = metadata->getHwContext();
+    if(!tranxHandler->submitELF(hwContext))
       return;
 
     if (db->infoAvailable(xdp::info::ml_timeline)) {

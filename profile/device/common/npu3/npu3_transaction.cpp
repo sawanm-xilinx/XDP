@@ -27,18 +27,29 @@ namespace xdp::aie {
     using severity_level = xrt_core::message::severity_level;
 
     //----------------------------------------------------------------------
+    // NPU3Transaction::fullElfKernelName
+    // Return the unique kernel name for this transaction's full ELF. Multiple
+    // XDP ELFs are add_config'd to the same hw_context, so the name must be
+    // unique per ELF to avoid a kernel-name collision.
+    //----------------------------------------------------------------------
+    std::string NPU3Transaction::fullElfKernelName(const std::string& instanceId)
+    {
+      return std::string("XDP_KERNEL_") + instanceId;
+    }
+
+    //----------------------------------------------------------------------
     // NPU3Transaction::fullElfKernelHandle
-    // Return the name/handle of the full ELF kernel
+    // Return the name/handle of the full ELF kernel (kernelName:instanceName).
     //----------------------------------------------------------------------
     std::string NPU3Transaction::fullElfKernelHandle(const std::string& instanceId)
     {
-      return std::string("XDP_KERNEL:") + instanceId;
+      return fullElfKernelName(instanceId) + ":" + instanceId;
     }
 
     //----------------------------------------------------------------------
     // NPU3Transaction::loadXdpKernelFullElfConfig
-    // Load xdp_kernel_full_elf.json (next to asm or ./) for AIEBU aie4_config.
-    // Replaces __XDP_ASM_PATH__ -> ./<asmBasename>, __XDP_INSTANCE_ID__ -> instanceId.
+    // Build the xdp_kernel_full_elf config JSON in memory for AIEBU aie4_config.
+    // Sets instance id -> instanceId, ctrl_code_file -> ./<asmBasename>.
     //----------------------------------------------------------------------
     std::vector<char> NPU3Transaction::loadXdpKernelFullElfConfig(const std::string& asmFileName,
                                                                   const std::string& instanceId)
@@ -47,40 +58,21 @@ namespace xdp::aie {
       const std::string asmRel =
           std::string("./") + asmPath.filename().generic_string();
 
-      const std::vector<std::filesystem::path> candidates = {
-        asmPath.parent_path() / "xdp_kernel_full_elf.json",
-        std::filesystem::path{"xdp_kernel_full_elf.json"},
-      };
-
-      std::string jsonText;
-      for (const auto& c : candidates) {
-        if (!std::filesystem::exists(c))
-          continue;
-        std::ifstream jin(c.string(), std::ios::binary);
-        if (!jin)
-          continue;
-        jin.seekg(0, std::ios::end);
-        const auto sz = jin.tellg();
-        if (sz <= std::streampos(0))
-          continue;
-        jin.seekg(0, std::ios::beg);
-        jsonText.resize(static_cast<std::size_t>(sz));
-        jin.read(jsonText.data(), static_cast<std::streamsize>(sz));
-        if (static_cast<std::size_t>(jin.gcount()) != jsonText.size())
-          continue;
-        break;
-      }
-
-      if (jsonText.empty())
-        throw std::runtime_error("xdp_kernel_full_elf.json not found (searched next to asm and ./)");
-
-      static constexpr char kAsmPlaceholder[] = "__XDP_ASM_PATH__";
-      if (auto pos = jsonText.find(kAsmPlaceholder); pos != std::string::npos)
-        jsonText.replace(pos, sizeof(kAsmPlaceholder) - 1, asmRel);
-
-      static constexpr char kInstPlaceholder[] = "__XDP_INSTANCE_ID__";
-      if (auto pos = jsonText.find(kInstPlaceholder); pos != std::string::npos)
-        jsonText.replace(pos, sizeof(kInstPlaceholder) - 1, instanceId);
+      const std::string jsonText =
+          "{\n"
+          "    \"xrt-kernels\": [\n"
+          "        {\n"
+          "            \"name\" : \"" + fullElfKernelName(instanceId) + "\",\n"
+          "            \"arguments\" : [],\n"
+          "            \"instance\" : [\n"
+          "                {\n"
+          "                \"id\" : \"" + instanceId + "\",\n"
+          "                \"ctrl_code_file\" : \"" + asmRel + "\"\n"
+          "                }\n"
+          "            ]\n"
+          "        }\n"
+          "    ]\n"
+          "}\n";
 
       return {jsonText.begin(), jsonText.end()};
     }

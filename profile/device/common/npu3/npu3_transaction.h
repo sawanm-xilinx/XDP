@@ -32,6 +32,7 @@ namespace xdp::aie {
       int getGroupID(int id, xrt::hw_context hwContext);
 
     private:
+      static std::string fullElfKernelName(const std::string& instanceId);
       static std::string fullElfKernelHandle(const std::string& instanceId);
       static std::vector<char> loadXdpKernelFullElfConfig(const std::string& asmFileName,
                                                         const std::string& instanceId);
