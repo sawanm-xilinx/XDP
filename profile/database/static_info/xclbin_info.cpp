@@ -572,7 +572,7 @@ namespace xdp {
     }
 
     void ConfigInfo::addTraceGMIO(uint32_t id, uint8_t col, uint8_t num,
-                                uint8_t stream, uint8_t len, uint16_t bdId, uint8_t /*t*/)
+                                uint8_t stream, uint8_t len, uint16_t bdId, uint8_t t)
     {
       for (auto bin : currentBinaries)
       {
@@ -580,7 +580,7 @@ namespace xdp {
         {
           xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
                                   "Added GMIO trace of ID "+ std::to_string(id) + ".");
-          bin->getAie().gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId)) ;
+          bin->getAie().gmioList.push_back(new TraceGMIO(id, col, num, stream, len, bdId, t)) ;
           return ;
         }
       }

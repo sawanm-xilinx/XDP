@@ -90,7 +90,7 @@ namespace xdp {
         "Allocating trace buffer of size " + std::to_string(bufAllocSz) + " for AIE Stream " 
         + std::to_string(i));
       xrt_bos.emplace_back(xrt::bo(context.get_device(), bufAllocSz,
-                           XRT_BO_FLAGS_HOST_ONLY, tranxHandler->getGroupID(0, context)));
+                           XRT_BO_FLAGS_HOST_ONLY, 0));
       
       buffers[i].bufId = xrt_bos.size();
       if (!buffers[i].bufId) {
@@ -109,7 +109,7 @@ namespace xdp {
 
       auto dmaType = traceGMIO->type;
       XAie_DmaDirection dmaDir = (dmaType == io_type::TRACE_DMA) ? DMA_S2MM_TRACE : DMA_S2MM;
-      uint8_t  s2mm_ch_id = (dmaType >= S2MM_TRACE) ? 0 : traceGMIO->channelNumber;
+      uint8_t  s2mm_ch_id = (dmaType == io_type::TRACE_DMA) ? 0 : traceGMIO->channelNumber;
       uint16_t s2mm_bd_id = 0; /* always use first bd in private pool */
 
       // S2MM BD
