@@ -269,7 +269,10 @@ auto time = std::time(nullptr);
     }
       
     #ifdef XDP_CLIENT_BUILD
-      implementation->poll(0);
+      // Use the implementation's real device id so the polled samples are
+      //  stored under the same id the writer reads from. AIE-only contexts
+      //  get ids starting at 1, so a hardcoded 0 would drop the counter data.
+      implementation->poll(implementation->getDeviceID());
     #endif
 
     implementation->endPoll();
@@ -282,7 +285,10 @@ auto time = std::time(nullptr);
 
     #ifdef XDP_CLIENT_BUILD
       auto& implementation = handleToAIEProfileImpl.begin()->second;
-      implementation->poll(0);
+      // Use the implementation's real device id so the polled samples are
+      //  stored under the same id the writer reads from. AIE-only contexts
+      //  get ids starting at 1, so a hardcoded 0 would drop the counter data.
+      implementation->poll(implementation->getDeviceID());
     #endif
     // Ask all threads to end
     for (auto& p : handleToAIEProfileImpl) {
