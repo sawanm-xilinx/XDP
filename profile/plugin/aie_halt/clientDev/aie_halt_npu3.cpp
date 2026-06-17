@@ -49,31 +49,17 @@ namespace xdp {
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
                             "In AIEHaltNPU3Impl::updateDevice");
 
-#if 0
-    const xdp::aie::BaseFiletypeImpl *metadataReader = 
+    // The parsed AIE metadata is the single source of truth for the driver
+    // config. Without a reader there is nothing valid to configure, so bail
+    // rather than feed a zero-initialized config into the AIE driver.
+    const xdp::aie::BaseFiletypeImpl* metadataReader =
       (db->getStaticInfo()).getAIEmetadataReader(mDeviceId);
     if (!metadataReader) {
-      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", 
-        "Unable to get AIE metadata reader");
+      xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT",
+        "AIE Halt: no AIE metadata reader available; skipping AIE halt configuration.");
       return;
     }
-
-    auto meta_config = metadataReader->getDriverConfig();
-#else
-    // Hardcoded NPU3 (AIE4/Medusa) driver config constants
-    xdp::aie::driver_config meta_config {};
-    meta_config.hw_gen             = XAIE_DEV_GEN_AIE4;  // 42
-    meta_config.base_address       = 0;
-    meta_config.column_shift       = 25;
-    meta_config.row_shift          = 20;
-    meta_config.num_rows           = 6;   // 1 shim + 1 mem + 4 AIE
-    meta_config.num_columns        = 3;
-    meta_config.shim_row           = 0;
-    meta_config.mem_row_start      = 1;
-    meta_config.mem_num_rows       = 1;
-    meta_config.aie_tile_row_start = 2;
-    meta_config.aie_tile_num_rows  = 4;
-#endif
+    xdp::aie::driver_config meta_config = metadataReader->getDriverConfig();
 
     XAie_Config cfg {
       meta_config.hw_gen,
