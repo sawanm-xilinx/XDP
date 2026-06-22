@@ -99,7 +99,6 @@ void AieTracePluginUnified::updateAIEDevice(void *handle, bool hw_context_flow) 
   if (!handle)
     return;
 
-  xrt_core::message::send(xrt_core::message::severity_level::info, "XRT", "Identify flow type");
   bool isFullELFFlow = false;
   if (hw_context_flow) {
     xrt::hw_context ctx = xrt_core::hw_context_int::create_hw_context_from_implementation(handle);
@@ -107,7 +106,7 @@ void AieTracePluginUnified::updateAIEDevice(void *handle, bool hw_context_flow) 
       isFullELFFlow = xrt_core::hw_context_int::get_elf_flow(ctx);
     } catch (const std::exception& e) {
       std::stringstream msg;
-      msg << e.what() << " AIE Event Trace cannot be enabled before complete configuration." << std::endl;
+      msg << e.what() << " AIE Event Trace cannot be enabled before complete configuration.";
       xrt_core::message::send(xrt_core::message::severity_level::warning, "XRT", msg.str());
       return;
     }
