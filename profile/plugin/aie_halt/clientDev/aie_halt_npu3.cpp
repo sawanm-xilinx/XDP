@@ -49,9 +49,8 @@ namespace xdp {
     xrt_core::message::send(xrt_core::message::severity_level::debug, "XRT",
                             "In AIEHaltNPU3Impl::updateDevice");
 
-    // The parsed AIE metadata is the single source of truth for the driver
-    // config. Without a reader there is nothing valid to configure, so bail
-    // rather than feed a zero-initialized config into the AIE driver.
+    // The AIE metadata reader is the source of the driver config; without it
+    // there is nothing valid to configure, so bail.
     const xdp::aie::BaseFiletypeImpl* metadataReader =
       (db->getStaticInfo()).getAIEmetadataReader(mDeviceId);
     if (!metadataReader) {

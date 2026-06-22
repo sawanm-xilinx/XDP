@@ -370,8 +370,6 @@ namespace xdp {
       return;
     if(!tranxHandler->generateELF())
       return;
-    // if (!tranxHandler->submitTransaction(&aieDevInst, context))
-    //   return;
   }
 
   void AieProfile_NPU3Impl::poll(const uint64_t id)
