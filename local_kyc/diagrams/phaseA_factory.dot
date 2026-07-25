@@ -1,0 +1,69 @@
+digraph phaseA_factory {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  label="Phase A - The Factory: how a loaded binary becomes a VPBinData / ConfigInfo\n(static_info_database.cpp)";
+  node [fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9];
+
+  /* ---- source of truth ---- */
+  host [shape=box, style="rounded,filled", fillcolor="#E8EAF6",
+        label="HOST + XRT\nhost creates an hw_context from either an xclbin OR a full ELF"];
+
+  /* ---- decision made in the PLUGIN, per hw_context ---- */
+  subgraph cluster_plugin {
+    label="PLUGIN layer (e.g. aie_trace_plugin.cpp::updateAIEDevice)";
+    style="rounded"; color="#7986CB"; fontcolor="#3949AB";
+    getflow [shape=box, style=filled, fillcolor="#FFF3E0",
+             label="isFullELFFlow =\nxrt_core::hw_context_int::get_elf_flow(ctx)\n\n<-- THE actual xclbin-vs-elf decision\n(answer comes from XRT, not from XDP)"];
+    decide [shape=diamond, style=filled, fillcolor="#FFE0B2", label="isFullELFFlow ?"];
+    getflow -> decide;
+  }
+  host -> getflow;
+
+  /* ---- ELF branch ---- */
+  subgraph cluster_elf {
+    label="FULL-ELF branch";
+    style="rounded"; color="#66BB6A"; fontcolor="#2E7D32";
+    e1 [shape=box, label="get_elf_map(ctx) -> pick AIE-metadata ELF\n(util::getAieMetadataElf)"];
+    e2 [shape=box, label="updateDeviceFromCoreDeviceElf(deviceId, device, elf)\n(3-arg overload)"];
+    e3 [shape=box, label="elf.get_cfg_uuid()  -> config UUID\n(no UUID => warn + bail)"];
+    e4 [shape=box, style=filled, fillcolor="#C8E6C9",
+        label="new ElfBinData(elf, device, uuid)\nsource = ELF, no PL"];
+    e5 [shape=box, label="bin->readAIEMetadata(tree)\nAIE_METADATA elf section, else on-disk json\nbin->populateFromReader(...) fills AIEInfo"];
+    e1 -> e2 -> e3 -> e4 -> e5;
+  }
+
+  /* ---- XCLBIN branch ---- */
+  subgraph cluster_xclbin {
+    label="XCLBIN branch";
+    style="rounded"; color="#42A5F5"; fontcolor="#1565C0";
+    x1 [shape=box, label="updateDeviceFromCoreDevice / ...HwCtxFlow / ...FromHandle\nget xclbin uuid (slot query / hw_context)"];
+    x2 [shape=box, label="updateDevice(deviceId, xrtXclbin, ...)"];
+    x3 [shape=box, label="getXclbinType(xrtXclbin) ->\nXCLBIN_PL_ONLY / AIE_ONLY / AIE_PL"];
+    x4 [shape=box, style=filled, fillcolor="#BBDEFB",
+        label="new XclbinBinData(xclbinType)\nsource = XCLBIN, has PL + AIE"];
+    x5 [shape=box, label="initializeStructure(...) + readAIEMetadata(...)\nfills PLInfo (CUs, monitors) + AIEInfo"];
+    x1 -> x2 -> x3 -> x4 -> x5;
+  }
+
+  decide -> e1 [label=" true (full elf)", color="#2E7D32", fontcolor="#2E7D32"];
+  decide -> x1 [label=" false (xclbin)", color="#1565C0", fontcolor="#1565C0"];
+
+  /* ---- convergence: the common creation path ---- */
+  create [shape=box, style="filled", fillcolor="#F3E5F5",
+          label="DeviceInfo::createConfig(VPBinData*)\n(device_info.cpp) -- SAME entry point for both"];
+  build  [shape=box, style="filled", fillcolor="#F3E5F5",
+          label="VPBinData::buildConfig(DeviceInfo&)  [polymorphic]\nElf: self-contained -> CONFIG_ELF_AIE_ONLY\nXclbin: may merge prior half via fromLastConfig()\n   -> CONFIG_AIE_PL / _FORMED / AIE_ONLY / PL_ONLY"];
+  cfg    [shape=box, style="filled,rounded", fillcolor="#EDE7F6",
+          label="ConfigInfo { type, vector<VPBinData*> }\nappended to DeviceInfo::loadedConfigInfos\n(this is what every plugin/writer reads later)"];
+
+  e5 -> create;
+  x5 -> create;
+  create -> build -> cfg;
+
+  /* ---- who consumes ---- */
+  consumers [shape=note, style=filled, fillcolor="#FCE4EC",
+             label="Consumers (Phase B+) ask ConfigInfo, source-agnostic:\n getAieBinary() -> works for xclbin AND elf\n getPlBinary()  -> xclbin only, null on pure-ELF\n getNumAM/AIM/ASM(VPBinData*), getAMonitor(...), ..."];
+  cfg -> consumers [style=dashed, color="#AD1457"];
+}

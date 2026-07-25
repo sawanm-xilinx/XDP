@@ -1,0 +1,56 @@
+digraph createconfig_buildconfig {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  label="createConfig -> buildConfig -> ConfigInfo ctor : who calls what, and when constructors fire";
+  node [fontname="Helvetica", fontsize=10, shape=box];
+  edge [fontname="Helvetica", fontsize=9];
+
+  step0 [style="filled", fillcolor="#FFF3E0",
+    label="STEP 0  (factory, static_info_database.cpp)\l--------------------------------------\lXclbin:  XclbinBinData* b = new XclbinBinData(type)   <== CTOR #1 (binary)\lElf:     auto b = make_unique<ElfBinData>(elf,dev,uuid) <== CTOR #1 (binary)\l\lCTOR #1 only sets identity (m_uuid/m_name/m_type);\lm_pl and m_aie are default-constructed empty.\l(For xclbin, PLInfo/AIEInfo get filled *before* step1 by initializeStructure)"];
+
+  step1 [style="filled", fillcolor="#E3F2FD",
+    label="STEP 1  DeviceInfo::createConfig(VPBinData* binary)   (device_info.cpp:47)\l--------------------------------------\lloadedConfigInfos.push_back( binary->buildConfig(*this) );\l\lOne line. It does NOT build ConfigInfo itself -- it delegates to the\lbinary (polymorphic) and stores whatever comes back."];
+
+  decide [shape=diamond, style=filled, fillcolor="#FFE0B2",
+    label="binary->buildConfig(*this)\l(virtual dispatch)"];
+
+  /* ELF branch */
+  elf [style="filled", fillcolor="#C8E6C9",
+    label="ElfBinData::buildConfig(devInfo)   (elf_bin_data.cpp:88)  [devInfo IGNORED]\l--------------------------------------\lauto config = make_unique<ConfigInfo>();   <== CTOR #2 = DEFAULT ctor\l                                            (type starts CONFIG_AIE_PL)\lconfig->addBinary(this);      // currentBinaries = { this }\lconfig->type = CONFIG_ELF_AIE_ONLY;\lreturn config;                // exactly ONE binary, self-contained"];
+
+  /* XCLBIN branch */
+  xclbin [style="filled", fillcolor="#BBDEFB",
+    label="XclbinBinData::buildConfig(devInfo)   (xclbin_info.cpp:747)\l--------------------------------------\lauto config = make_unique<ConfigInfo>();   <== CTOR #2 = DEFAULT ctor\lconfig->addBinary(this);"];
+
+  xfull [style="filled", fillcolor="#BBDEFB",
+    label="type == XCLBIN_AIE_PL (complete)?\lYES -> return config (stays CONFIG_AIE_PL). Done, 1 binary."];
+
+  xpartial [style="filled", fillcolor="#E1F5FE",
+    label="PARTIAL (AIE_ONLY or PL_ONLY):\l  mark this binary's missing half invalid (getPl/getAie().valid=false)\l  missing = XclbinBinData::fromLastConfig(devInfo, otherHalfType)\l           (deep-copies the sibling out of devInfo.getLoadedConfigs().back())"];
+
+  xmerge [shape=diamond, style=filled, fillcolor="#FFE0B2", label="missing found?"];
+
+  xmergeY [style="filled", fillcolor="#E1F5FE",
+    label="YES: config->addBinary(missing)  <== CTOR #1b (new XclbinBinData in fromLastConfig)\l     config->type = CONFIG_AIE_PL_FORMED   (now 2 binaries)"];
+  xmergeN [style="filled", fillcolor="#E1F5FE",
+    label="NO:  config->type = CONFIG_AIE_ONLY or CONFIG_PL_ONLY  (1 binary)"];
+
+  done [style="filled,rounded", fillcolor="#EDE7F6",
+    label="return unique_ptr<ConfigInfo>  -->  pushed into DeviceInfo::loadedConfigInfos\l(now currentConfig() == this new config)"];
+
+  note [shape=note, style=filled, fillcolor="#FCE4EC",
+    label="NOTE: the parametrized ConfigInfo(VPBinData*) ctor (xclbin_info.cpp:220)\lwhich maps BinaryInfoType->ConfigInfoType is currently UNUSED.\lBoth buildConfig paths use the DEFAULT ctor + addBinary + manual type set.\l\l~ConfigInfo() deletes every VPBinData* in currentBinaries (owns them) + plDeviceIntf."];
+
+  step0 -> step1 -> decide;
+  decide -> elf     [label=" ELF"];
+  decide -> xclbin  [label=" XCLBIN"];
+  xclbin -> xfull -> done [label=" complete"];
+  xfull -> xpartial [label=" partial", style=dashed];
+  xpartial -> xmerge -> xmergeY;
+  xmerge -> xmergeN [label=" no"];
+  xmergeY -> done;
+  xmergeN -> done;
+  elf -> done;
+  done -> note [style=dashed, color="#AD1457"];
+}

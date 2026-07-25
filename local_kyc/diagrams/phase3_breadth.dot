@@ -1,0 +1,65 @@
+digraph phase3_breadth {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  label="Phase 3 - Breadth: one shared spine, plugin-specific 'configure HW' and 'collect data' ends";
+  node [fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9];
+
+  /* shared spine */
+  subgraph cluster_spine {
+    label="SHARED SPINE (identical shape for every AIE plugin)";
+    style="rounded,filled"; color="#7986CB"; fillcolor="#EDE7F6"; fontcolor="#3949AB";
+    s1 [shape=box, style=filled, fillcolor="#FFFFFF",
+        label="1. plugin = static instance + extern \"C\" cb hooks\l   ctor: db->registerPlugin(this)"];
+    s2 [shape=box, style=filled, fillcolor="#FFF3E0",
+        label="2. callback -> get_elf_flow() -> Phase A factory\l   builds VPBinData/ConfigInfo in STATIC db"];
+    s3 [shape=box, style=filled, fillcolor="#FFFFFF",
+        label="3. Metadata object READS STATIC (tiles/metrics/geometry)"];
+    s4 [shape=box, style=filled, fillcolor="#FFFFFF",
+        label="4. pick platform impl at compile time\l   (VE2 / client / x86 / edge)"];
+    s5 [shape=box, style=filled, fillcolor="#E1BEE7",
+        label="5. *** CONFIGURE HW ***  (plugin-specific, see below)"];
+    s6 [shape=box, style=filled, fillcolor="#E1BEE7",
+        label="6. *** COLLECT DATA -> DYNAMIC db ***  (plugin-specific)"];
+    s7 [shape=box, style=filled, fillcolor="#FFFFFF",
+        label="7. teardown: flush hooks -> WRITER (STATIC + DYNAMIC -> files)"];
+    s1 -> s2 -> s3 -> s4 -> s5 -> s6 -> s7;
+  }
+
+  /* per-plugin CONFIGURE differences */
+  cfg_trace  [shape=note, style=filled, fillcolor="#C8E6C9",
+    label="aie_trace: XAie transaction -> setMetricsSettings\l -> control-code ELF (metrics) + flush ELF (+ windowed)\l submit: add_config / xrt::module"];
+  cfg_prof   [shape=note, style=filled, fillcolor="#C8E6C9",
+    label="aie_profile: XAie transaction -> setMetricsSettings\l -> ONE control-code ELF (counters)\l submit: add_config / xrt::module"];
+  cfg_halt   [shape=note, style=filled, fillcolor="#DCEDC8",
+    label="aie_halt: prebuilt HALT ELF (no per-tile loop)\l submit: add_config / xrt::module"];
+  cfg_ml     [shape=note, style=filled, fillcolor="#DCEDC8",
+    label="ml_timeline: NO control-code transaction\l allocates a debug BO (bo_int::create_bo/config_bo)"];
+
+  s5 -> cfg_trace [style=dashed, color="#2E7D32"];
+  s5 -> cfg_prof  [style=dashed, color="#2E7D32"];
+  s5 -> cfg_halt  [style=dashed, color="#2E7D32"];
+  s5 -> cfg_ml    [style=dashed, color="#2E7D32"];
+
+  /* per-plugin COLLECT differences */
+  col_trace [shape=note, style=filled, fillcolor="#BBDEFB",
+    label="aie_trace: offload trace stream (GMIO/PLIO)\l -> addAIETraceData()"];
+  col_prof  [shape=note, style=filled, fillcolor="#BBDEFB",
+    label="aie_profile: periodic poll() of counters\l -> addAIESample()"];
+  col_halt  [shape=note, style=filled, fillcolor="#B3E5FC",
+    label="aie_halt: NONE (just halts cores for ML Debugger)"];
+  col_ml    [shape=note, style=filled, fillcolor="#B3E5FC",
+    label="ml_timeline: read record-timer BO\l -> record_timer_ts.json"];
+
+  s6 -> col_trace [style=dashed, color="#1565C0"];
+  s6 -> col_prof  [style=dashed, color="#1565C0"];
+  s6 -> col_halt  [style=dashed, color="#1565C0"];
+  s6 -> col_ml    [style=dashed, color="#1565C0"];
+
+  /* where the xclbin/full-elf change touched */
+  change [shape=box, style="filled,rounded", fillcolor="#FCE4EC",
+    label="YOUR xclbin/full-elf change touched every AIE plugin at the SAME 2 seams:\l  (A) step 2: get_elf_flow -> pick Elf vs Xclbin factory\l  (B) step 5: submit fork add_config(elf) [full-elf] vs xrt::module [xclbin]\lPlugins without control code (ml_timeline) only needed seam (A)."];
+  s2 -> change [style=dotted, color="#AD1457"];
+  s5 -> change [style=dotted, color="#AD1457"];
+}

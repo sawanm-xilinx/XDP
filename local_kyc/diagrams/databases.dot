@@ -1,0 +1,41 @@
+digraph databases {
+  rankdir=LR;
+  labelloc="t";
+  fontname="Helvetica";
+  label="XDP databases: STATIC (what the HW is) vs DYNAMIC (what the HW did)";
+  node [fontname="Helvetica", fontsize=10, shape=record];
+  edge [fontname="Helvetica", fontsize=9];
+
+  subgraph cluster_static {
+    label="VPStaticDatabase  (static_info_database.h)  -- structure, does not change mid-run";
+    style="rounded"; color="#42A5F5"; fontcolor="#1565C0";
+    s_root [label="{VPStaticDatabase|deviceInfo : map\<uint64_t deviceId, DeviceInfo\>}", fillcolor="#E3F2FD", style="filled,rounded"];
+    s_dev  [label="{DeviceInfo|deviceId, deviceName, aieGeneration...|loadedConfigInfos : vector\<ConfigInfo\>|currentConfig() = last}", fillcolor="#E3F2FD", style=filled];
+    s_cfg  [label="{ConfigInfo|type : ConfigInfoType|currentBinaries : vector\<VPBinData*\>|plDeviceIntf}", fillcolor="#E3F2FD", style=filled];
+    s_bin  [label="{VPBinData (interface)|XclbinBinData: PLInfo + AIEInfo|ElfBinData: AIEInfo only}", fillcolor="#BBDEFB", style=filled];
+    s_pl   [label="{PLInfo|compute units, AIM/AM/ASM monitors,\lmemories, NoC, clockRate}", fillcolor="#E1F5FE", style=filled];
+    s_aie  [label="{AIEInfo|AIE counters, TraceGMIOs,\lcfg tiles, event resources}", fillcolor="#E1F5FE", style=filled];
+    s_root -> s_dev -> s_cfg -> s_bin;
+    s_bin -> s_pl;
+    s_bin -> s_aie;
+  }
+
+  subgraph cluster_dyn {
+    label="VPDynamicDatabase  (dynamic_event_database.h)  -- values collected during the run";
+    style="rounded"; color="#66BB6A"; fontcolor="#2E7D32";
+    d_root [label="{VPDynamicDatabase|host : HostDB|devices : map\<uint64_t deviceId, DeviceDB\>}", fillcolor="#E8F5E9", style="filled,rounded"];
+    d_host [label="{HostDB|sorted/unsorted VTFEvents|API start/end matching, deps}", fillcolor="#E8F5E9", style=filled];
+    d_dev  [label="{DeviceDB|pl_db : PLDB|aie_db : AIEDB}", fillcolor="#E8F5E9", style=filled];
+    d_pl   [label="{PLDB|PL trace events, counter results,\lpower samples, deadlock info}", fillcolor="#F1F8E9", style=filled];
+    d_aie  [label="{AIEDB|traceDataMap (per io_type),\lprofile samples, timer samples,\ldebug samples}", fillcolor="#F1F8E9", style=filled];
+    d_root -> d_host;
+    d_root -> d_dev;
+    d_dev -> d_pl;
+    d_dev -> d_aie;
+  }
+
+  writer [shape=note, style=filled, fillcolor="#FCE4EC",
+          label="WRITER joins the two by deviceId:\lSTATIC gives structure (which monitor/tile),\lDYNAMIC gives the values,\l-> summary.csv / trace / ml_timeline.json"];
+  s_root -> writer [style=dashed, color="#AD1457"];
+  d_root -> writer [style=dashed, color="#AD1457"];
+}

@@ -1,0 +1,61 @@
+digraph phaseB_slice {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  label="Phase B - AIE Trace on VE2 (XDNA / full-elf): one vertical slice, init -> run -> output";
+  node [fontname="Helvetica", fontsize=10, shape=box];
+  edge [fontname="Helvetica", fontsize=9];
+
+  /* XRT trigger */
+  xrt [style="filled,rounded", fillcolor="#E8EAF6",
+    label="XRT loads design / creates hw_context\ncalls extern \"C\" hooks in aie_trace_cb.cpp:\n updateAIEDevice() / flushAIEDevice() / finishFlushAIEDevice()"];
+
+  /* SETUP in plugin */
+  subgraph cluster_setup {
+    label="SETUP: AieTracePluginUnified::updateAIEDevice (aie_trace_plugin.cpp)  [PLUGIN layer]";
+    style="rounded"; color="#7986CB"; fontcolor="#3949AB";
+    p1 [label="isFullELFFlow = get_elf_flow(ctx)   <== same oracle as Phase A"];
+    p2 [style=filled, fillcolor="#FFF3E0",
+        label="update STATIC db (Phase A factory):\n full-elf -> updateDeviceFromCoreDeviceElf(...)\n xclbin  -> updateDeviceFromCoreDeviceHwCtxFlow(...)\n => DeviceInfo/ConfigInfo/VPBinData now populated"];
+    p3 [label="AieTraceMetadata(deviceID, handle)\nREADS STATIC: tiles, GMIOs, metrics, clock, geometry"];
+    p4 [label="pick impl: AieTrace_VE2Impl(db, metadata)"];
+    p5 [label="read trace GMIO endpoints from metadata\n-> addTraceGMIO() back into STATIC"];
+    p6 [label="AIETraceOffloadManager + createTraceWriters()\nconfigureAndInitGMIO(): allocate trace buffers (BOs)\ninitReadTraces()"];
+    p7 [style=filled, fillcolor="#C8E6C9",
+        label="implementation->updateDevice()  (ve2/aie_trace.cpp:1335)\n -> setMetricsSettings(): program AIE via XAie_* driver\n    (records a TRANSACTION = the CONTROL CODE)\n -> tranxHandler->submitTransaction(devInst, hwContext)\n    completeASM -> generateELF -> submitELF\n    full-elf: hwContext.add_config(elf); else xrt::module"];
+    p8 [label="(optional) start pollAIETimers thread\nfor system-timeline timestamps"];
+    p1 -> p2 -> p3 -> p4 -> p5 -> p6 -> p7 -> p8;
+  }
+  xrt -> p1 [label=" updateAIEDevice()"];
+
+  /* RUN */
+  subgraph cluster_run {
+    label="RUN: hardware produces trace  [DEVICE layer]";
+    style="rounded"; color="#42A5F5"; fontcolor="#1565C0";
+    r1 [label="AIE tiles emit trace packets -> GMIO/PLIO -> DDR trace buffers"];
+    r2 [label="AIETraceOffload::readTraceGMIO/PLIO (aie_trace_offload_ve2.cpp)\ncopies buffer out"];
+    r3 [style=filled, fillcolor="#BBDEFB",
+        label="traceLogger->addAIETraceData(index, buf, nBytes, ...)\n==> DYNAMIC db  (DeviceDB.aie_db.traceDataMap)"];
+    r1 -> r2 -> r3;
+  }
+  p8 -> r1 [label=" app runs kernels", style=dashed];
+
+  /* TEARDOWN */
+  subgraph cluster_teardown {
+    label="TEARDOWN: flush + write  [PLUGIN -> WRITER layer]";
+    style="rounded"; color="#66BB6A"; fontcolor="#2E7D32";
+    t1 [label="flushAIEDevice / finishFlushAIEDevice / writeAll"];
+    t2 [label="implementation->flushTraceModules()\n(flush ELF forces last packets out of tiles)"];
+    t3 [label="offloadManager->flushAll(true)  (final buffer read -> DYNAMIC)"];
+    t4 [style=filled, fillcolor="#E8F5E9",
+        label="XDPPlugin::endWrite() -> trace WRITER\njoins STATIC (structure) + DYNAMIC (values)\n-> trace output files"];
+    t1 -> t2 -> t3 -> t4;
+  }
+  xrt -> t1 [label=" flush/finish hooks", style=dashed];
+  r3 -> t3 [style=dashed, color="#2E7D32"];
+
+  /* correlation callout */
+  corr [shape=note, style=filled, fillcolor="#FCE4EC",
+    label="A<->B correlation:\n Phase A builds STATIC (ConfigInfo/VPBinData).\n Phase B step p3/p5 READ that STATIC to know what to trace,\n and step r3 fills DYNAMIC. The WRITER needs both."];
+  p2 -> corr [style=dotted, color="#AD1457"];
+}

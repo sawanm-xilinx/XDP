@@ -1,0 +1,58 @@
+digraph controlcode_pipeline {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  label="AIE Trace control-code pipeline: XAie calls -> transaction (ASM) -> aiebu assembler -> ELF -> hw_context -> AIE HW";
+  node [fontname="Helvetica", fontsize=10, shape=box];
+  edge [fontname="Helvetica", fontsize=9];
+
+  key [shape=note, style=filled, fillcolor="#FFFDE7",
+    label="KEY IDEA (XDNA/VE2): XAie_* calls do NOT touch hardware directly.\lThe IO backend is set to CONTROLCODE, so every XAie_* register op is\lRECORDED into an ASM control-code file (a 'transaction'). That recording\lis later assembled into an ELF and run on the AIE microcontroller."];
+
+  subgraph cluster_rec {
+    label="1) RECORD a transaction  (ve2_transaction.cpp + setMetricsSettings)";
+    style="rounded"; color="#7986CB"; fontcolor="#3949AB";
+    a1 [label="initializeTransaction(devInst, name)\lXAie_SetIOBackend(CONTROLCODE)\lXAie_OpenControlCodeFile(name.asm, 8192)\lXAie_StartNewJob()"];
+    a2 [style=filled, fillcolor="#E8EAF6",
+        label="setMetricsSettings(): loop over tiles, emit XAie_* ops:\lXAie_TraceStartEvent / XAie_TraceStopEvent / XAie_TraceEvent\lXAie_EventBroadcast / XAie_PerfCounter* / XAie_EventGenerate\l(each call appended to the .asm as register writes)"];
+    a3 [label="completeASM(devInst)\lXAie_EndJob / XAie_EndPage / XAie_CloseControlCodeFile\l=> finished <name>.asm"];
+    a1 -> a2 -> a3;
+  }
+  key -> a1 [style=invis];
+
+  subgraph cluster_asm {
+    label="2) ASSEMBLE  (generateELF -> aiebu::aiebu_assembler)";
+    style="rounded"; color="#42A5F5"; fontcolor="#1565C0";
+    b1 [shape=diamond, style=filled, fillcolor="#FFE0B2", label="m_fullElfFlow ?"];
+    b2 [style=filled, fillcolor="#C8E6C9",
+        label="FULL-ELF: buffer_type = aie2ps_config\lbuild config JSON {xrt-kernels:[{name, instance:[{id, ctrl_code_file}]}]}\lassembler -> SELF-DESCRIBING config ELF (knows its own kernel)"];
+    b3 [style=filled, fillcolor="#BBDEFB",
+        label="XCLBIN: buffer_type = asm_aie2ps\lfeed raw control-code bytes\lassembler -> PARTIAL (control-code-only) ELF"];
+    b4 [label="write <name>.elf to disk"];
+    b1 -> b2 [label=" true"];
+    b1 -> b3 [label=" false"];
+    b2 -> b4; b3 -> b4;
+  }
+  a3 -> b1;
+
+  subgraph cluster_submit {
+    label="3) SUBMIT + RUN  (submitELF)";
+    style="rounded"; color="#66BB6A"; fontcolor="#2E7D32";
+    c0 [label="profileElf = xrt::elf(<name>.elf)"];
+    c1 [shape=diamond, style=filled, fillcolor="#FFE0B2", label="m_fullElfFlow ?"];
+    c2 [style=filled, fillcolor="#C8E6C9",
+        label="FULL-ELF:\lhwContext.add_config(profileElf)   // register ELF onto the context\lkernel = xrt::ext::kernel{hwContext, \"XDP_KERNEL_<id>:<id>\"}\l(unique name -> many XDP ELFs can coexist on one context)"];
+    c3 [style=filled, fillcolor="#BBDEFB",
+        label="XCLBIN:\lxrt::module mod{profileElf}       // wrap partial ELF in a module\lkernel = xrt::ext::kernel{hwContext, mod, \"XDP_KERNEL:{IPUV1CNN}\"}"];
+    c4 [label="xrt::run run{kernel}; run.start(); run.wait2();\l=> AIE microcontroller executes the control code"];
+    c0 -> c1;
+    c1 -> c2 [label=" true"];
+    c1 -> c3 [label=" false"];
+    c2 -> c4; c3 -> c4;
+  }
+  b4 -> c0;
+
+  hw [style="filled,rounded", fillcolor="#F3E5F5",
+    label="AIE hardware now configured: trace events/counters armed,\lbroadcast network set. Trace packets will flow to GMIO/PLIO -> DDR."];
+  c4 -> hw;
+}

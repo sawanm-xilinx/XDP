@@ -1,0 +1,95 @@
+digraph master_index {
+  rankdir=TB;
+  labelloc="t";
+  fontname="Helvetica";
+  compound=true;
+  label="XDP MASTER INDEX - end-to-end flow with all phases (VE2 AIE trace, full-elf & xclbin)";
+  node [fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9];
+
+  /* ============ TOP: host + XRT ============ */
+  host [shape=box, style="rounded,filled", fillcolor="#E8EAF6",
+    label="HOST APP + XRT\lloads a design (xclbin OR full-elf), creates hw_context, runs kernels\l(hw_context = XRT handle: get_elf_flow / get_elf_map / add_config)"];
+
+  /* ============ PHASE 0: layers ============ */
+  subgraph cluster_p0 {
+    label="PHASE 0  (note 01) - the 4 layers";
+    style="rounded,filled"; color="#9E9E9E"; fillcolor="#F5F5F5"; fontcolor="#424242";
+    layers [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="PLUGIN (brain)  ->  DATABASE (memory: STATIC + DYNAMIC)\l  ->  DEVICE (hands)  ->  WRITER (mouth)"];
+  }
+  host -> layers [lhead=cluster_p0, label=" XRT callbacks/hooks"];
+
+  /* ============ PHASE A + Phase 2: factory + VPBinData into STATIC ============ */
+  subgraph cluster_pA {
+    label="PHASE A (note 03) + PRIORITY (note 02) - factory builds STATIC";
+    style="rounded,filled"; color="#42A5F5"; fillcolor="#E3F2FD"; fontcolor="#1565C0";
+    a_dec [shape=diamond, style=filled, fillcolor="#FFE0B2",
+      label="get_elf_flow(ctx) ?\l(THE xclbin-vs-elf oracle)"];
+    a_elf [shape=box, style=filled, fillcolor="#C8E6C9",
+      label="ELF: updateDeviceFromCoreDeviceElf\l new ElfBinData (AIE only, no PL)"];
+    a_xcl [shape=box, style=filled, fillcolor="#BBDEFB",
+      label="XCLBIN: updateDevice\l new XclbinBinData (PL + AIE)"];
+    a_cc [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="DeviceInfo::createConfig -> VPBinData::buildConfig (note 05)\l (xclbin partial may merge sibling via fromLastConfig)"];
+    a_out [shape=box, style="filled,rounded", fillcolor="#E1F5FE",
+      label="STATIC db:  DeviceInfo -> [ConfigInfo] -> [VPBinData]\l VPBinData = neutral interface (XclbinBinData | ElfBinData)"];
+    a_dec -> a_elf [label=" full-elf"];
+    a_dec -> a_xcl [label=" xclbin"];
+    a_elf -> a_cc; a_xcl -> a_cc; a_cc -> a_out;
+  }
+  layers -> a_dec [lhead=cluster_pA, label=" plugin callback"];
+
+  /* ============ PHASE B: the vertical slice ============ */
+  subgraph cluster_pB {
+    label="PHASE B (note 06) - aie_trace vertical slice";
+    style="rounded,filled"; color="#7986CB"; fillcolor="#EDE7F6"; fontcolor="#3949AB";
+    b_meta [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="AieTraceMetadata READS STATIC\l(what to trace: tiles/GMIOs/metrics)"];
+    b_impl [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="pick impl: AieTrace_VE2Impl + offload manager + buffers"];
+    b_cfg [shape=box, style=filled, fillcolor="#E1BEE7",
+      label="implementation->updateDevice() -> CONFIGURE HW (Phase-CC)"];
+    b_meta -> b_impl -> b_cfg;
+  }
+  a_out -> b_meta [lhead=cluster_pB];
+
+  /* ============ CONTROL CODE (note 07) ============ */
+  subgraph cluster_cc {
+    label="CONTROL CODE (note 07) - configure the AIE";
+    style="rounded,filled"; color="#66BB6A"; fillcolor="#E8F5E9"; fontcolor="#2E7D32";
+    cc1 [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="setMetricsSettings: XAie_* ops RECORDED into ASM\l(IO backend = CONTROLCODE, via devInst)"];
+    cc2 [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="aiebu assembler: ASM -> ELF\l aie2ps_config (full-elf) | asm_aie2ps (xclbin)"];
+    cc3 [shape=box, style=filled, fillcolor="#DCEDC8",
+      label="submit fork:\l full-elf: hwContext.add_config(elf)\l xclbin:  xrt::module{elf}\l then run -> AIE microcontroller replays writes"];
+    cc4 [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="ELFs: metrics (arm) + flush (drain) + windowed (opt)"];
+    cc1 -> cc2 -> cc3 -> cc4;
+  }
+  b_cfg -> cc1 [lhead=cluster_cc];
+
+  /* ============ RUN + DYNAMIC ============ */
+  subgraph cluster_run {
+    label="RUN - hardware produces data -> DYNAMIC db";
+    style="rounded,filled"; color="#FFA726"; fillcolor="#FFF3E0"; fontcolor="#E65100";
+    run1 [shape=box, style=filled, fillcolor="#FFFFFF",
+      label="AIE emits trace/counters -> DDR buffers"];
+    run2 [shape=box, style="filled,rounded", fillcolor="#FFE0B2",
+      label="DYNAMIC db (note 04):  DeviceDB{aie_db, pl_db} + HostDB\l trace: addAIETraceData | profile: addAIESample"];
+    run1 -> run2;
+  }
+  cc4 -> run1 [lhead=cluster_run];
+
+  /* ============ WRITER ============ */
+  writer [shape=box, style="filled,rounded", fillcolor="#FCE4EC",
+    label="TEARDOWN + WRITER\l flush ELF drains tiles -> final read -> DYNAMIC\l WRITER joins STATIC (structure) + DYNAMIC (values) -> output files\l (summary.csv / trace / record_timer_ts.json)"];
+  run2 -> writer;
+
+  /* ============ PHASE 3 breadth callout ============ */
+  breadth [shape=note, style=filled, fillcolor="#F3E5F5",
+    label="PHASE 3 breadth (note 08): SAME spine for all AIE plugins.\l Differences only at CONFIGURE + COLLECT:\l  aie_profile ~ aie_trace (poll instead of offload)\l  aie_halt = prebuilt ELF, no data\l  ml_timeline = debug BO, no control code\l Your xclbin/full-elf change = 2 seams: get_elf_flow + submit fork"];
+  cc3 -> breadth [style=dotted, color="#AD1457"];
+  a_dec -> breadth [style=dotted, color="#AD1457"];
+}
