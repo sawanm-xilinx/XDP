@@ -31,6 +31,8 @@ notes below for detail.
 | — | setMetricsSettings, XAie/transactions, add_config vs module, assembler, ELF types, pollTimers | `07_setmetrics_transaction_elf.md` |
 | B | One vertical slice: aie_trace on VE2 start→end | `06_phaseB_slice_aie_trace_ve2.md` |
 | 3 | Breadth: other plugins reuse the same spine | `08_phase3_breadth.md` |
+| Sum | Read-once end-to-end summary + master map | `09_summary_full_flow.md` |
+| Real | Full-ELF test walkthrough (real run, artifacts, XRT hw_context/add_config) | `10_fullelf_test_walkthrough.md` |
 
 Diagrams live in `diagrams/` (`.dot` source + rendered `.png`).
 
